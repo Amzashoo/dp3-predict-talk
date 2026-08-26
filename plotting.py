@@ -20,17 +20,22 @@ DATA = Path("data")
 
 # Palette: blue = baseline, orange = intermediate attempts, teal = final /
 # validated solution. Reused consistently across every chart in this talk.
-BLUE = "#2a78d6"
-ORANGE = "#eb6834"
-TEAL = "#1baf7a"
-INK = "#0b0b0b"
-INK2 = "#52514e"
-INK3 = "#8b8a84"
-GRID = "#e1e0d9"
+# Brightened relative to a light-slide version of this palette so they still
+# pop against the dark slide background used by custom.scss.
+BLUE = "#4c8fe0"
+ORANGE = "#f08a4b"
+TEAL = "#2bd0a0"
+INK = "#e7e9ee"
+INK2 = "#aab2c0"
+INK3 = "#77808f"
+GRID = "#333c4d"
 
 plt.rcParams.update({
     "font.family": "sans-serif",
-    "axes.edgecolor": "#c3c2b7",
+    "figure.facecolor": "none",
+    "axes.facecolor": "none",
+    "savefig.facecolor": "none",
+    "axes.edgecolor": "#4a5468",
     "axes.labelcolor": INK2,
     "text.color": INK,
     "xtick.color": INK2,
@@ -41,6 +46,7 @@ plt.rcParams.update({
     "axes.spines.top": False,
     "axes.spines.right": False,
     "font.size": 12,
+    "legend.labelcolor": INK,
 })
 
 

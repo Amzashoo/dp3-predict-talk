@@ -1,2 +1,186 @@
 /*-- scss:defaults --*/
-$presentation-font-size-root: 22px !default;
+
+// Palette matches the figures in plotting.py: BLUE / ORANGE / TEAL.
+$body-bg: #10131a;
+$body-bg-2: #161b26;
+$body-color: #e7e9ee;
+
+$link-color: #59a6ff;
+$link-color-hover: #8cc4ff;
+
+$blue: #4c8fe0;
+$orange: #f08a4b;
+$teal: #2bd0a0;
+
+$presentation-heading-color: #f4f6fb;
+$presentation-heading-font: "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+$presentation-font-family: "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+$presentation-font-size-root: 22px;
+$presentation-line-height: 1.45;
+
+$code-block-bg: #1a2030;
+$code-color: #e7c07b;
+
+$selection-bg: rgba($teal, 0.35);
+
+/*-- scss:rules --*/
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+.reveal {
+  font-family: $presentation-font-family;
+  background: radial-gradient(ellipse at top, $body-bg-2 0%, $body-bg 65%);
+}
+
+.reveal .slides {
+  text-align: left;
+}
+
+.reveal .slides section {
+  text-align: left;
+}
+
+// Title slide is centered and gets extra visual weight
+.reveal .slides section.title-slide,
+.reveal .slides > section:first-of-type {
+  text-align: center;
+}
+
+.reveal h1, .reveal h2, .reveal h3, .reveal h4 {
+  font-family: $presentation-heading-font;
+  color: $presentation-heading-color;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.reveal h1 {
+  font-size: 1.9em;
+  font-weight: 800;
+  background: linear-gradient(90deg, #ffffff 0%, #b9c6dd 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.reveal h2 {
+  font-size: 1.35em;
+  border-bottom: 2px solid rgba($teal, 0.45);
+  padding-bottom: 0.22em;
+  margin-bottom: 0.55em;
+}
+
+.reveal h3 {
+  color: $teal;
+  font-size: 1.02em;
+}
+
+.reveal p, .reveal li {
+  color: $body-color;
+}
+
+.reveal .subtitle {
+  color: #9aa5b8;
+  font-weight: 400;
+}
+
+.reveal em {
+  color: $orange;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.reveal strong {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.reveal a {
+  color: $link-color;
+  transition: color 0.15s ease;
+}
+.reveal a:hover {
+  color: $link-color-hover;
+}
+
+// Bullets: subtle marker instead of the default disc, matches the accent palette
+.reveal ul {
+  list-style: none;
+}
+.reveal ul li {
+  position: relative;
+  padding-left: 1.05em;
+  margin-bottom: 0.35em;
+}
+.reveal ul li::before {
+  content: "▸";
+  position: absolute;
+  left: 0;
+  color: $teal;
+  font-weight: 700;
+}
+.reveal ul ul li::before {
+  content: "–";
+  color: $orange;
+}
+
+.reveal blockquote {
+  border-left: 3px solid $orange;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.5em 1em;
+  color: #cfd6e3;
+}
+
+// Code
+.reveal pre {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+.reveal code {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+}
+
+// Tables
+.reveal table {
+  border-collapse: collapse;
+  margin: 0.6em 0;
+}
+.reveal table th {
+  color: $teal;
+  border-bottom: 2px solid rgba($teal, 0.5);
+  font-weight: 600;
+}
+.reveal table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.reveal table tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+// Figures: matplotlib output rendered transparent, drop a soft card behind it
+.reveal .cell-output-display img {
+  background: transparent;
+}
+.reveal figure {
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.35));
+}
+
+// Slide number / progress bar tinted to match
+.reveal .slide-number {
+  color: #6b7688;
+  background: transparent;
+}
+.reveal .progress {
+  color: $teal;
+}
+
+// Panel/columns
+.reveal .columns {
+  display: flex;
+  gap: 1.5em;
+}
+
+::selection {
+  background: $selection-bg;
+}

@@ -1,3 +1,3 @@
 implementation,memory_bound_pct,l1_bound_pct,l2_bound_pct,l3_bound_pct,dram_bound_pct,store_bound_pct,loads,stores,llc_miss_count,status
-tbb_fixed,44.6,4.5,2.8,13.1,2.4,3.3,13674177856455,4945532580676,172275313672,confirmed
+tbb_fixed,37.8,4.5,2.4,12.8,2.3,3.5,11844764063224,4276099455812,151334606014,confirmed
 tiled_final,34.8,4.9,5.4,17.8,1.8,0.2,2149370915878,728552387962,27500789012,confirmed
