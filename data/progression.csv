@@ -1,0 +1,6 @@
+stage,commit,predict_s,normal_timestep_s,note
+upstream_original,upstream_master,1161,,StaticFor baseline
+tiled_layout,3e439717,562,3.125,channel x source tiling alone
+split_planes,62c44168,547,2.967,split real/imag float accumulation
+slab_rounding,cd6f63fb,529,2.826,slab width rounded to vector width (53->48 channels)
+simd_sincos,5c9ff19e,337,0.740,xsimd::sincos explicit vectorisation

@@ -1,0 +1,7 @@
+metric,value,unit
+predict,1161,s
+wall,1612.03,s
+user_cpu,66622.6,s
+mean_parallelism,41.33,x
+effective_cpu_utilization,32.0,pct
+cycle_spread_ratio,3.45,x

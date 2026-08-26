@@ -1,0 +1,12 @@
+# quarto render output - regenerate with `quarto render slides.qmd`
+/slides.html
+/slides_files/
+/.quarto/
+/*.quarto_ipynb
+
+# scratch data scripts write to before parsing
+*.log
+/dist/
+
+__pycache__
+*.out
