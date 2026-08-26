@@ -414,20 +414,39 @@ def tiling_diagram() -> None:
 
 
 # --------------------------------------------------------------- slide 11 --
-def layout_impact() -> dict:
-    """Two-bar before/after: predict time, upstream vs. tiled layout alone."""
-    prog = pd.read_csv(DATA / "progression.csv").set_index("stage")
-    before = prog.loc["upstream_original", "predict_s"]
-    after = prog.loc["tiled_layout", "predict_s"]
+STAGE_LABELS = {
+    "upstream_original": "upstream",
+    "tiled_layout": "tiled\nlayout",
+    "split_planes": "split\nplanes",
+    "slab_rounding": "slab\nrounding",
+    "simd_sincos": "SIMD\nsincos",
+}
 
-    fig, ax = plt.subplots(figsize=(6, 1.6))
-    ax.barh(["tiled layout", "upstream"], [after, before], color=[TEAL, "#c9c7bd"])
-    ax.set_xlabel("predict step, s")
-    for i, v in enumerate([after, before]):
-        ax.text(v + 15, i, f"{v:.0f}s", va="center", fontsize=10)
+
+def progression_bars(up_to_stage: str) -> dict:
+    """Cumulative bar chart: predict time per optimization stage, from
+    upstream through up_to_stage. Shared by slides 13-16, one column
+    added each time, same y-axis throughout so each slide reads as the
+    last one plus a column."""
+    prog = pd.read_csv(DATA / "progression.csv").set_index("stage")
+    stages = list(STAGE_LABELS)
+    stages = stages[: stages.index(up_to_stage) + 1]
+    values = prog.loc[stages, "predict_s"]
+    upstream = prog.loc["upstream_original", "predict_s"]
+
+    fig, ax = plt.subplots(figsize=(4.5, 3.5))
+    colors = ["#c9c7bd"] * (len(stages) - 1) + [TEAL]
+    ax.bar(range(len(stages)), values, color=colors, width=0.6)
+    ax.set_xticks(range(len(stages)))
+    ax.set_xticklabels([STAGE_LABELS[s] for s in stages], fontsize=9)
+    ax.set_ylabel("predict step, s")
+    ax.set_ylim(0, upstream * 1.15)
+    for i, v in enumerate(values):
+        ax.text(i, v + upstream * 0.02, f"{v:.0f}s", ha="center", fontsize=9)
     plt.tight_layout()
     plt.show()
-    return {"before": before, "after": after}
+    current = values.iloc[-1]
+    return {"before": upstream, "after": current, "speedup": upstream / current}
 
 
 # --------------------------------------------------------------- slide 12 --
@@ -450,14 +469,6 @@ def split_planes_diagram() -> None:
     ax.axis("off")
     plt.tight_layout()
     plt.show()
-
-
-def progression_impact(stage_before: str, stage_after: str) -> Markdown:
-    """Shared by slides 12-14: reads two rows of progression.csv, returns
-    the 'Impact: Xs -> Ys' line."""
-    prog = pd.read_csv(DATA / "progression.csv").set_index("stage")
-    a, b = prog.loc[stage_before, "predict_s"], prog.loc[stage_after, "predict_s"]
-    return Markdown(f"Impact: **{a:.0f}s → {b:.0f}s**")
 
 
 # --------------------------------------------------------------- slide 13 --

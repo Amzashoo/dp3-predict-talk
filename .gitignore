@@ -6,7 +6,6 @@
 
 # scratch data scripts write to before parsing
 *.log
-/dist/
 
 __pycache__
 *.out
