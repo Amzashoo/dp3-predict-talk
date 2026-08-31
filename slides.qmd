@@ -4,7 +4,7 @@ subtitle: "Parallelism, memory accesses and vectorization"
 author: "Hamza Chouh, EPFL"
 format:
   revealjs:
-    theme: [night, custom.scss]
+    theme: [default, custom.scss]
     slide-number: true
     incremental: false
     code-fold: false
@@ -51,7 +51,7 @@ plotting.reference_workload_table()
 :::
 :::
 
-## Original work distribution {.smaller}
+## Original work distribution
 
 ::: {.columns}
 ::: {.column width="60%"}
@@ -130,7 +130,7 @@ plotting.work_stealing_diagram()
 plotting.tbb_vs_baseline_scaling()
 ```
 
-## Per-thread load, TBB {.smaller}
+## Per-thread load, TBB
 
 ```{python}
 #| fig-height: 3.0
@@ -140,9 +140,9 @@ work = plotting.dispatch_work_totals()
 
 ::: {.columns}
 ::: {.column width="54%"}
-- Work stealing redistributes work ☭: `{python} f"{tbb_load['items_min']}–{tbb_load['items_max']}"`
-  items per thread, against a flat 348 for the static split
-- Much better per-thread time balance
+- Work stealing redistributes work ☭: between `{python} f"{tbb_load['items_min']} and {tbb_load['items_max']}"`
+  items per thread
+- Better per-thread time balance
 - Only `{python} f"{work['makespan_gain_pct']:.0f}%"` of total time saved:
   total work grew
   `{python} f"{work['work_growth_pct']:.0f}%"`
@@ -156,7 +156,7 @@ plotting.load_balance_table()
 :::
 :::
 
-## Removing the redundant beam applies {.smaller}
+## Removing the redundant beam applies
 
 ```{python}
 #| fig-height: 2.5
@@ -200,9 +200,10 @@ plotting.tiling_diagram()
 
 - Each thread works a channel slab × source block tile sized to stay inside
   L2, instead of every source sweeping the full channel range
+- Current implementation only works on unpolarized sky models
 - **Hypothesis**: expected to cut cache misses and reduce pressure on DDR
 
-## Impact of the new layout {.smaller}
+## Impact of the new layout
 
 ::: {.columns}
 ::: {.column width="45%"}
@@ -221,30 +222,27 @@ layout = plotting.progression_bars("tiled_layout")
 :::
 :::
 
-## Vectorizing the inner loops {.smaller}
+## Vectorizing the inner loops
 
 ```{python}
 loops = plotting.loop_progression()
 ```
 
 ::: {.columns}
-::: {.column width="52%"}
+::: {.column width="50%"}
 ```{python}
 #| fig-height: 4.6
 plotting.inner_loop_diagram()
 ```
 :::
-::: {.column width="48%"}
+::: {.column width="50%"}
 ```{python}
 #| fig-height: 2.7
 plotting.loop_progression_bars()
 ```
 
-- Accumulate into two `float` planes instead of interleaved
-  `complex<double>` — contiguous lanes, and the interleave back happens
-  once per tile instead of once per source
-- Slab rounded to a whole vector width, so there is no ragged epilogue at
-  every slab
+- Structure of arrays pattern for processing, then written into array of structures
+- Slab rounded to a multiple of an SIMD lane to avoid scalar epilogues
 - `xsimd::sincos` in `phases()` and `xsimd::exp` in the Gaussian envelope
 - Combined performance gain:
   `{python} f"{loops['before']:.2f}s → {loops['after']:.2f}s"` per normal
@@ -253,7 +251,7 @@ plotting.loop_progression_bars()
 :::
 :::
 
-## Why the totals move less {.smaller}
+## Overall effect
 
 ::: {.columns}
 ::: {.column width="45%"}
@@ -269,7 +267,7 @@ am = plotting.amdahl_split()
 :::
 :::
 
-## Per-thread load — final {.smaller}
+## Per-thread load, final version
 
 ```{python}
 #| fig-height: 3.0
@@ -277,13 +275,14 @@ final_load = plotting.final_per_thread_load()
 gran = plotting.tile_granularity()
 ```
 
-- Beam application for scalar sources is now contained in simulate(), the remainder is for Gaussian sources
+- Beam application for scalar sources is now contained in `simulate()`, the remainder is for Gaussian sources
 - Residual spread is a granularity floor: going finer leads to worse performance
 
 ## Final results
 
 ```{python}
-#| fig-height: 3.5
+#| fig-height: 4.5
+#| fig-align: center
 final = plotting.final_scaling()
 bal = plotting.load_balance_stats()
 ```
@@ -299,3 +298,6 @@ bal = plotting.load_balance_stats()
   - it balanced the threads much better
   - but paid for it in both compute and memory accesses from redundant per-patch work
   - the real gain came from reordering memory access
+- Perspective: polarized sky models. The tiled path needs Stokes I today;
+  applying the Jones matrix per patch **per channel slab** keeps
+  the tile in L2 and saves memory traffic

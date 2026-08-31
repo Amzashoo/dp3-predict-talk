@@ -19,36 +19,46 @@ from IPython.display import Markdown
 
 DATA = Path("data")
 
-# Palette: blue = baseline, orange = intermediate attempts, teal = final /
-# validated solution. Reused consistently across every chart in this talk.
-# Brightened relative to a light-slide version of this palette so they still
-# pop against the dark slide background used by custom.scss.
-BLUE = "#4c8fe0"
-ORANGE = "#f08a4b"
-TEAL = "#2bd0a0"
-INK = "#e7e9ee"
-INK2 = "#aab2c0"
-INK3 = "#77808f"
-GRID = "#333c4d"
+# Palette: red = baseline, ochre = intermediate attempts, green = final /
+# validated solution - so a chart warms up where it shows the problem and
+# cools down where it shows the result. Reused consistently across every chart
+# in this talk, and the same three hues custom.scss sets the deck in.
+# The names are the roles, not the hues: BLUE/ORANGE/TEAL are what these three
+# series have been called since the deck was dark, and every figure below and
+# every skin in STYLE_VARIANTS/ keys off them.
+BLUE = "#b23b30"     # baseline
+ORANGE = "#a87a1e"   # intermediate attempts
+TEAL = "#0f766e"     # final / validated
+INK = "#14171a"
+INK2 = "#4d545a"
+INK3 = "#868d93"
 
 plt.rcParams.update({
     "font.family": "sans-serif",
     "figure.facecolor": "none",
     "axes.facecolor": "none",
     "savefig.facecolor": "none",
-    "axes.edgecolor": "#4a5468",
+    "axes.edgecolor": "#969ea4",
     "axes.labelcolor": INK2,
     "text.color": INK,
     "xtick.color": INK2,
     "ytick.color": INK2,
-    "axes.grid": True,
-    "grid.color": GRID,
-    "grid.linewidth": 0.8,
+    # No gridlines anywhere: they compete with the bars and lines instead of
+    # helping read values off them, and every chart here is read for its shape
+    # rather than off the axis.
+    "axes.grid": False,
     "axes.spines.top": False,
     "axes.spines.right": False,
     "font.size": 12,
     "legend.labelcolor": INK,
+    "axes.linewidth": 1.2,
 })
+
+# Legends sit inside the axes on most of these charts, which on light stock
+# puts the labels over a filled bar. matplotlib's default is an unframed
+# legend, so every call site below passes this instead.
+LEGEND = dict(frameon=True, facecolor="#f7f8f6", edgecolor=INK3,
+              framealpha=0.95)
 
 
 NBSP = " "
@@ -105,11 +115,10 @@ def predict_share() -> dict:
 
     fig, ax = plt.subplots(figsize=(3, 4.2))
     ax.bar(0, predict, color=BLUE, width=0.6)
-    ax.bar(0, rest, bottom=predict, color="#3a4256", width=0.6)
+    ax.bar(0, rest, bottom=predict, color="#b5bcc0", width=0.6)
     ax.set_ylim(0, total)
     ax.set_xticks([])
     ax.set_xlim(-0.6, 0.6)
-    ax.grid(False)
     ax.set_ylabel("seconds, baseline run")
     ax.text(0, predict / 2, f"predict\n{fmt_int(predict)}s\n({predict/total*100:.0f}%)",
             ha="center", va="center", color="white", fontsize=10, fontweight="bold")
@@ -136,7 +145,7 @@ def reference_workload_table() -> Markdown:
 
     df["value"] = df["value"].map(value)
     return Markdown(
-        "Test configuration used for every measurement in this talk\n\n"
+        "Test configuration used for benchmarking in this talk\n\n"
         + df.to_markdown(index=False, headers=["quantity", "value"],
                          colalign=("left", "right"))
     )
@@ -175,7 +184,6 @@ def core_imbalance() -> dict:
     bins = [80 + 5 * i for i in range(49)]  # 80..320 Gcycles, 5 G wide
     ax.hist(vals, bins=bins, color=BLUE, linewidth=0)
 
-    ax.set_axisbelow(True)  # or the gridlines are drawn over the bars
     ax.set_xlabel("CPU cycles per thread (billions)")
     ax.set_ylabel("threads")
     ax.set_xticks([80 + 40 * i for i in range(7)])
@@ -236,7 +244,7 @@ def baseline_scaling_plot() -> dict:
     ax.minorticks_off()
     ax.set_xlabel("threads")
     ax.set_ylabel("predict time, s")
-    ax.legend(frameon=False, fontsize=9)
+    ax.legend(fontsize=9, **LEGEND)
 
     # Call out the shortfall where it is widest, at the full thread count.
     ax.annotate("", xy=(threads[-1], measured[-1]), xytext=(threads[-1], ideal[-1]),
@@ -288,7 +296,10 @@ def _per_thread_load(csv_name: str, color: str, pending_hint: str,
     mean_t = total.mean()
     ax2.set_xlabel("thread")
     ax2.set_ylabel("thread busy time, s")
-    ax2.legend(frameon=False, fontsize=8, loc="lower right")
+    # Below the panels rather than inside ax2: at "lower right" the labels
+    # sit on top of the bars and are unreadable on the dark slide.
+    fig.legend(*ax2.get_legend_handles_labels(), fontsize=8.5, **LEGEND,
+               ncol=2, loc="lower center", bbox_to_anchor=(0.5, -0.03))
     spread = (total.max() - total.min()) / mean_t * 100
     ax2.set_title(f"Time per thread (total spread {spread:.0f}%)",
                   loc="left", fontsize=11)
@@ -513,7 +524,7 @@ def dispatch_variants_diagram() -> None:
                 fontsize=8, color="white")
         ax.add_patch(mpatches.Rectangle((5.9, 7.0), 3.6, 1.3, facecolor=ORANGE, **box))
         ax.text(7.7, 7.65, "beam\napply", ha="center", va="center",
-                fontsize=8, color="white")
+                fontsize=8, color=INK)
         ax.annotate("", xy=(5.8, 7.65), xytext=(4.2, 7.65),
                     arrowprops=dict(arrowstyle="->", color=INK2, lw=1.4))
         ax.text(5.0, 8.5, "patch\ncomplete", ha="center", fontsize=7,
@@ -522,7 +533,7 @@ def dispatch_variants_diagram() -> None:
         # Worker pool below, pulling from either stage.
         for i, cx in enumerate((2.0, 5.0, 8.0)):
             ax.add_patch(mpatches.Rectangle((cx - 0.75, 4.2), 1.5, 0.95,
-                                            facecolor="#3a4256", linewidth=0))
+                                            facecolor="#b5bcc0", linewidth=0))
             ax.text(cx, 4.68, f"T{i + 1}", ha="center", va="center",
                     fontsize=8, color=INK)
             for target in (2.3, 7.7):
@@ -549,7 +560,7 @@ def dispatch_variants_diagram() -> None:
     for i in range(7):
         axes[2].add_patch(mpatches.Rectangle((8.7, 3.4 + i * 0.55), 0.9, 0.42,
                                              facecolor=ORANGE, alpha=0.5))
-    axes[2].text(9.15, 7.6, "1 buffer\nper patch", fontsize=7.5, color="#f6b98a",
+    axes[2].text(9.15, 7.6, "1 buffer\nper patch", fontsize=7.5, color="#8a5a0f",
                  ha="center", va="bottom")
 
     legend = [
@@ -557,7 +568,7 @@ def dispatch_variants_diagram() -> None:
         mpatches.Patch(facecolor=ORANGE, alpha=0.95, label="beam apply"),
         mpatches.Patch(facecolor="none", edgecolor=INK3, hatch="////", label="idle"),
     ]
-    fig.legend(handles=legend, frameon=False, fontsize=8.5, ncol=3,
+    fig.legend(handles=legend, fontsize=8.5, ncol=3, **LEGEND,
                loc="lower center", bbox_to_anchor=(0.5, -0.04))
     plt.tight_layout()
     plt.show()
@@ -665,7 +676,7 @@ def tbb_vs_baseline_scaling() -> Markdown:
     ax.set_xticklabels(sc_ok["threads"].astype(int))
     ax.set_xlabel("threads")
     ax.set_ylabel("aggregate predict time, s")
-    ax.legend(frameon=False)
+    ax.legend(**LEGEND)
     plt.tight_layout()
     plt.show()
 
@@ -722,7 +733,7 @@ def memory_traffic_bars() -> Markdown | None:
     ax.set_xticks(list(x))
     ax.set_xticklabels(["L1", "L2", "L3", "DRAM", "Store"])
     ax.set_ylabel("% of clockticks stalled")
-    ax.legend(frameon=False)
+    ax.legend(**LEGEND)
     plt.tight_layout()
     plt.show()
     return None
@@ -772,7 +783,7 @@ def tiling_diagram() -> None:
     """
     ref = pd.read_csv(DATA / "reference_workload.csv").set_index("quantity")
     n_chan = int(ref.loc["channels", "value"])
-    slab = 48  # rounded to a whole AVX-512 vector width; see slide 14
+    slab = 53
     n_slabs = 4
     n_src = 6
 
@@ -786,7 +797,6 @@ def tiling_diagram() -> None:
         ax.set_ylabel("sources", fontsize=10)
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.grid(False)
         for spine in ("left", "bottom"):
             ax.spines[spine].set_visible(True)
         ax.add_patch(mpatches.Rectangle((0, 0), 10, n_src, fill=False,
@@ -799,12 +809,12 @@ def tiling_diagram() -> None:
         y = n_src - 0.5 - i
         ax.annotate("", xy=(9.7, y), xytext=(0.3, y),
                     arrowprops=dict(arrowstyle="->", color=ORANGE, lw=2))
-        ax.text(0.15, y, str(i + 1), fontsize=8, color=ORANGE,
+        ax.text(0.25, y, str(i + 1), fontsize=8, color=ORANGE,
                 ha="right", va="center")
     ax.add_patch(mpatches.Rectangle((0, 0), 10 * slab / n_chan, n_src,
                                     facecolor=TEAL, alpha=0.16,
                                     edgecolor=TEAL, linestyle="dashed", linewidth=1.2))
-    ax.text(10 * slab / n_chan + 0.15, n_src + 0.12,
+    ax.text(10 * slab / n_chan + 0.25, n_src + 0.12,
             f"only ~{slab} channels fit in L2", fontsize=9, color=TEAL, va="bottom")
     ax.text(5, -1.05, "each source re-crosses the whole row —\nthe slab is evicted before the next one reuses it",
             fontsize=9.5, color=ORANGE, ha="center", va="top")
@@ -821,7 +831,7 @@ def tiling_diagram() -> None:
         y = n_src - 0.5 - i
         ax.annotate("", xy=(w - 0.25, y), xytext=(0.25, y),
                     arrowprops=dict(arrowstyle="->", color=TEAL, lw=2))
-        ax.text(0.1, y, str(i + 1), fontsize=8, color=TEAL, ha="right", va="center")
+        ax.text(0.25, y, str(i + 1), fontsize=8, color=TEAL, ha="right", va="center")
     ax.annotate("", xy=(w + 0.9, n_src / 2), xytext=(w + 0.1, n_src / 2),
                 arrowprops=dict(arrowstyle="->", color=INK2, lw=1.6))
     ax.text(w + 1.15, n_src / 2, "then the\nnext slab", fontsize=8.5,
@@ -863,12 +873,11 @@ def loop_progression_bars() -> None:
     vals = [prog.loc[st, "normal_timestep_s"] for st in stages]
 
     fig, ax = plt.subplots(figsize=(4.6, 2.9))
-    ax.bar(range(len(vals)), vals, color=["#3a4256"] * 3 + [TEAL], width=0.62)
+    ax.bar(range(len(vals)), vals, color=["#b5bcc0"] * 3 + [TEAL], width=0.62)
     ax.set_xticks(range(len(vals)))
     ax.set_xticklabels(labels, fontsize=9)
     ax.set_ylabel("normal timestep, s")
     ax.set_ylim(0, max(vals) * 1.2)
-    ax.set_axisbelow(True)
     for i, v in enumerate(vals):
         ax.text(i, v + max(vals) * 0.03, f"{v:.2f}s", ha="center", fontsize=9)
     plt.tight_layout()
@@ -963,7 +972,7 @@ def progression_bars(up_to_stage: str) -> dict:
     upstream = prog.loc["upstream_original", "predict_s"]
 
     fig, ax = plt.subplots(figsize=(4.5, 3.5))
-    colors = ["#3a4256"] * (len(stages) - 1) + [TEAL]
+    colors = ["#b5bcc0"] * (len(stages) - 1) + [TEAL]
     ax.bar(range(len(stages)), values, color=colors, width=0.6)
     ax.set_xticks(range(len(stages)))
     ax.set_xticklabels([STAGE_LABELS[s] for s in stages], fontsize=9)
@@ -1013,8 +1022,7 @@ def amdahl_split() -> dict:
     ax.set_xticks(x)
     ax.set_xticklabels(["baseline", "final"])
     ax.set_ylabel("predict step, s")
-    ax.legend(frameon=False, fontsize=9)
-    ax.set_axisbelow(True)
+    ax.legend(fontsize=9, **LEGEND)
     for xi, (n, b) in zip(x, ((bn, bb), (fn, fb))):
         ax.text(xi, n + b + 8, f"{fmt_int(n + b)}s", ha="center", fontsize=9)
     plt.tight_layout()
@@ -1040,7 +1048,7 @@ def final_scaling() -> dict:
     ax.set_yscale("log")
     ax.set_xlabel("threads")
     ax.set_ylabel("aggregate predict time, s")
-    ax.legend(frameon=False)
+    ax.legend(**LEGEND)
     plt.tight_layout()
     plt.show()
 

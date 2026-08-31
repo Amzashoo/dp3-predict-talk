@@ -1,199 +1,234 @@
 /*-- scss:defaults --*/
 
-// Palette matches the figures in plotting.py: BLUE / ORANGE / TEAL.
-$body-bg: #10131a;
-$body-bg-2: #161b26;
-$body-color: #e7e9ee;
+$stock:   #f7f8f6;
+$stock-2: #eef0ee;   // gutter / shaded cell
+$ink:     #14171a;
+$ink-2:   #4d545a;
+$ink-3:   #868d93;
+$rule:    #ccd2d3;
 
-$link-color: #59a6ff;
-$link-color-hover: #8cc4ff;
+$teal:  #0f766e;     // primary
+$red:   #b23b30;     // secondary
 
-$blue: #4c8fe0;
-$orange: #f08a4b;
-$teal: #2bd0a0;
+$body-bg: $stock;
+$body-color: $ink;
 
-$presentation-heading-color: #f4f6fb;
-$presentation-heading-font: Helvetica, Arial, sans-serif;
-$presentation-font-family: Helvetica, Arial, sans-serif;
+$link-color: $red;
+$link-color-hover: $teal;
+
+$presentation-heading-color: $ink;
+$presentation-heading-font: "Spectral", Georgia, "Times New Roman", serif;
+$presentation-font-family: "Barlow", "Helvetica Neue", Helvetica, Arial, sans-serif;
 $presentation-font-size-root: 22px;
 $presentation-line-height: 1.45;
 
-$code-block-bg: #1a2030;
-$code-color: #e7c07b;
+$code-block-bg: $stock-2;
+$code-color: $red;
 
-$selection-bg: rgba($teal, 0.35);
+$selection-bg: rgba($red, 0.16);
 
 /*-- scss:rules --*/
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
 .reveal {
   font-family: $presentation-font-family;
-  background: radial-gradient(ellipse at top, $body-bg-2 0%, $body-bg 65%);
+  background: $stock;
+  color: $ink;
+  letter-spacing: -0.004em;
 }
 
-.reveal .slides {
-  text-align: left;
-}
+.reveal .slides,
+.reveal .slides section { text-align: left; }
 
-.reveal .slides section {
-  text-align: left;
-}
-
-// Title slide is centered and gets extra visual weight
+// The title page is set flush left like everything else. Quarto centres the
+// subtitle and the author block with their own rules, so those need naming -
+// `text-align` on the section alone reaches neither.
 .reveal .slides section.title-slide,
-.reveal .slides > section:first-of-type {
-  text-align: center;
-}
+.reveal .slides > section:first-of-type { text-align: left; }
+.reveal .slides section.title-slide .subtitle,
+.reveal .slides section.title-slide .quarto-title-authors,
+.reveal .slides section.title-slide .quarto-title-author,
+.reveal .slides section.title-slide .quarto-title-author-name,
+.reveal .slides section.title-slide .author,
+.reveal .slides section.title-slide .date { text-align: left; }
 
 .reveal h1, .reveal h2, .reveal h3, .reveal h4 {
   font-family: $presentation-heading-font;
   color: $presentation-heading-color;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  text-transform: none;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
 }
 
+// Title: large, heavy, flush left. No rule - the weight is the masthead.
 .reveal h1 {
-  font-size: 1.9em;
-  font-weight: 800;
-  background: linear-gradient(90deg, #ffffff 0%, #b9c6dd 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: 1.95em;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.012em;
+  margin-bottom: 0.4em;
 }
 
+// Section heading: uppercase and heavy, with a wide gap under it. Nothing
+// rules the top of the slide; the heading is the only thing up there and does
+// not need help being found.
 .reveal h2 {
-  font-size: 1.35em;
-  border-bottom: 2px solid rgba($teal, 0.45);
-  padding-bottom: 0.22em;
-  margin-bottom: 0.55em;
+  font-size: 1.36em;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.008em;
+  margin-bottom: 0.8em;
 }
 
 .reveal h3 {
-  color: $teal;
-  font-size: 1.02em;
+  color: $red;
+  font-size: 1.0em;
+  font-weight: 600;
+  font-style: italic;
+  text-transform: none;
 }
 
-.reveal p, .reveal li {
-  color: $body-color;
-}
+.reveal p, .reveal li { color: $body-color; }
 
 .reveal .subtitle {
-  color: #9aa5b8;
-  font-weight: 400;
+  font-weight: 500;
+  font-size: 0.95em;
+  color: $ink-2;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+// The author line on the title slide is the one place the red is set in type
+// rather than in a chart - it is the deck's only red word, so it does not have
+// to compete with the teal interface around it.
+.reveal .author, .reveal .quarto-title-author-name {
+  font-weight: 600;
+  color: $red;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .reveal em {
-  color: $orange;
+  color: $red;
   font-style: normal;
-  font-weight: 600;
-}
-
-.reveal strong {
-  color: #ffffff;
   font-weight: 700;
 }
+.reveal strong { color: $ink; font-weight: 700; }
 
 .reveal a {
   color: $link-color;
-  transition: color 0.15s ease;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
 }
-.reveal a:hover {
-  color: $link-color-hover;
-}
+.reveal a:hover { color: $link-color-hover; }
 
-// Bullets: subtle marker instead of the default disc, matches the accent palette.
-// Each nesting level needs its own selector: reveal ships
-// `.reveal ul ul {list-style-type: square}` and `.reveal ul ul ul {…circle}`,
-// which outrank a bare `.reveal ul` on specificity - so a nested item kept
-// its native square marker *and* got the ::before dash below.
+// Bullets: a filled teal square, a hollow red one a level down - the two
+// accents doing the one job that needs telling levels apart.
+// The per-level override is required: reveal ships
+// `.reveal ul ul {list-style-type: square}`, which outranks a bare
+// `.reveal ul` - a nested item would keep its native marker *and* get the
+// ::before below.
 .reveal ul,
 .reveal ul ul,
-.reveal ul ul ul {
-  list-style: none;
-}
+.reveal ul ul ul { list-style: none; }
 .reveal ul li {
   position: relative;
-  padding-left: 1.05em;
-  margin-bottom: 0.35em;
+  padding-left: 1.0em;
+  margin-bottom: 0.4em;
 }
 .reveal ul li::before {
-  content: "▸";
+  content: "";
   position: absolute;
-  left: 0;
-  color: $teal;
-  font-weight: 700;
+  left: 0.05em;
+  top: 0.55em;
+  width: 0.34em;
+  height: 0.34em;
+  background: $red;
 }
 .reveal ul ul li::before {
-  content: "–";
-  color: $orange;
+  background: none;
+  border: 1.5px solid $teal;
+  width: 0.3em;
+  height: 0.3em;
+  top: 0.58em;
 }
 
 .reveal blockquote {
-  border-left: 3px solid $orange;
-  background: rgba(255, 255, 255, 0.04);
+  border: none;
+  border-left: 3px solid $red;
+  background: $stock-2;
   padding: 0.5em 1em;
-  color: #cfd6e3;
+  color: $ink-2;
+  box-shadow: none;
+  font-style: normal;
 }
 
 // Code
 .reveal pre {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
+  box-shadow: none;
+  border: 1px solid $rule;
+  border-radius: 3px;
 }
-.reveal code {
-  font-family: "JetBrains Mono", "Fira Code", monospace;
+.reveal pre code { background: $stock-2; color: $ink; }
+.reveal code { font-family: "JetBrains Mono", "Fira Code", monospace; }
+.reveal p code, .reveal li code, .reveal td code {
+  background: none;
+  color: $red;
+  font-size: 0.93em;
 }
 
-// Tables
-.reveal table {
-  border-collapse: collapse;
-  margin: 0.6em 0;
-}
+// Tables: one rule, under the head. Nothing above it and nothing at the foot,
+// so no horizontal bar sits across the top of the table either.
+.reveal table { border-collapse: collapse; margin: 0.6em 0; }
 .reveal table th {
-  color: $teal;
-  border-bottom: 2px solid rgba($teal, 0.5);
-  font-weight: 600;
+  font-family: "Barlow", Helvetica, Arial, sans-serif;
+  color: $ink;
+  background: none;
+  border: none;
+  border-bottom: 2px solid $red;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.88em;
+  letter-spacing: 0.02em;
+  padding: 0.28em 0.7em;
 }
 .reveal table td {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid $rule;
+  padding: 0.24em 0.7em;
+  font-variant-numeric: tabular-nums;
 }
-.reveal table tr:hover td {
-  background: rgba(255, 255, 255, 0.03);
-}
+.reveal table tr:hover td { background: $stock-2; }
 
-// Opt-in: keep every cell on one line. Deliberately not the default -
-// slide 3's machine description is a sentence and needs to wrap.
+// Opt-in one-line cells; deliberately not the default - slide 3's machine
+// description is a sentence and has to wrap.
 .reveal .nowrap table th,
-.reveal .nowrap table td {
-  white-space: nowrap;
+.reveal .nowrap table td { white-space: nowrap; }
+
+// matplotlib renders transparent, so a figure inherits the stock. No shadow:
+// drop-shadow on a transparent PNG offsets every glyph and tick separately,
+// which reads as a double-printed axis rather than as a shadow.
+.reveal .cell-output-display img { background: transparent; }
+
+// Reveal keeps the neighbouring slides in the layout (`display: block`,
+// `opacity: 0`) for cross-fades. This deck runs `transition: none`, so they
+// are never faded out - some browsers still paint stray specks of them
+// through the empty half of a short slide. Not in PDF-export or scroll view,
+// where every slide is laid out at once on purpose.
+html:not(.print-pdf):not(.reveal-scroll) {
+  .reveal .slides > section.past,
+  .reveal .slides > section.future { visibility: hidden; }
 }
 
-// Figures: matplotlib output rendered transparent, drop a soft card behind it
-.reveal .cell-output-display img {
-  background: transparent;
-}
-.reveal figure {
-  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.35));
-}
-
-// Slide number / progress bar tinted to match
 .reveal .slide-number {
-  color: #6b7688;
-  background: transparent;
+  color: $stock;
+  background: $red;
+  border-radius: 0;
+  padding: 0.12em 0.5em;
+  font-weight: 600;
 }
-.reveal .progress {
-  color: $teal;
-}
+.reveal .progress { color: $red; height: 4px; }
+.reveal .controls { color: $red; }
 
-// Panel/columns
-.reveal .columns {
-  display: flex;
-  gap: 1.5em;
-}
+.reveal .columns { display: flex; gap: 1.6em; }
 
-::selection {
-  background: $selection-bg;
-}
+::selection { background: $selection-bg; }
