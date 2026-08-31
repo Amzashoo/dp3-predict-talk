@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=72
 #SBATCH --job-name=talk-06-final-scaling
 #SBATCH --output=talk-06-final-scaling-%j.out
-"""Slide 15 (final scaling): predict time vs. thread count, 30-timestep
+"""Slide 17 (final scaling): predict time vs. thread count, 30-timestep
 sweep, tiled OnePredictNew, current HEAD.
 
 Branch: rebase-onto-upstream, current HEAD. Usage:

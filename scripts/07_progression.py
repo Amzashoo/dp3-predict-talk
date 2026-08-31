@@ -8,7 +8,7 @@
 #SBATCH --cpus-per-task=72
 #SBATCH --job-name=talk-07-progression
 #SBATCH --output=talk-07-progression-%j.out
-"""Slides 11-14 (progression table): predict time at four real,
+"""Slides 13-16 (progression bars): predict time at four real,
 already-existing commits on rebase-onto-upstream, each one stage of the
 tiling rework. Unlike the other scripts here, this one builds FOUR
 separate worktrees itself (one per commit) rather than taking a prebuilt

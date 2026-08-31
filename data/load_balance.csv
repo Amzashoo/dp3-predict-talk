@@ -1,0 +1,4 @@
+implementation,stage,coverage_pct,timesteps,threads,utilization_pct,spread_pct,makespan_s,busy_mean_s,idle_s
+static_baseline,worker.range,100,28,72,77.4,64.2,8.258,6.374,1.884
+tbb,worker.range,95,28,72,99.6,0.6,8.025,7.995,0.030
+tiled_final,worker.range,98,28,72,94.8,9.1,0.719,0.681,0.038

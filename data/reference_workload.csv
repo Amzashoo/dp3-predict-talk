@@ -5,4 +5,4 @@ channels,416
 sky_components,25085
 patches,14365
 timesteps,100
-machine,"2x Intel Xeon Platinum 8360Y (Ice Lake-SP), 72 cores"
+machine,"2x72 cores, Intel Xeon Platinum 8360Y"

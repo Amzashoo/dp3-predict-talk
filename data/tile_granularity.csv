@@ -1,0 +1,5 @@
+source_blocks,units_per_timestep,units_per_thread,utilization_pct,spread_pct,idle_ms,makespan_s,normal_predict_s
+128,1152,16.0,94.9,8.7,37.0,0.723,0.736
+256,2304,32.0,97.2,4.8,20.0,0.711,0.730
+512,4400,61.1,98.3,3.1,12.0,0.714,0.748
+1024,6782,94.2,99.0,1.9,7.0,0.737,0.812

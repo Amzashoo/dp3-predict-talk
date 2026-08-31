@@ -1,3 +1,4 @@
-implementation,memory_bound_pct,l1_bound_pct,l2_bound_pct,l3_bound_pct,dram_bound_pct,store_bound_pct,loads,stores,llc_miss_count,status
-tbb_fixed,37.8,4.5,2.4,12.8,2.3,3.5,11844764063224,4276099455812,151334606014,confirmed
-tiled_final,34.8,4.9,5.4,17.8,1.8,0.2,2149370915878,728552387962,27500789012,confirmed
+implementation,memory_bound_pct,l1_bound_pct,l2_bound_pct,l3_bound_pct,dram_bound_pct,store_bound_pct,loads,stores,llc_miss_count,node,n_runs,status
+static_baseline,44.1,4.4,4.8,8.4,8.3,5.5,3981752115096,1544187980963,32633895791,jbm025,5,confirmed
+tbb_fixed,44.4,2.7,7.1,8.8,11.1,7.2,4455953913520,1662754763091,34265264475,jbm025,5,confirmed
+tiled_final,32.0,5.0,5.2,17.1,1.8,0.2,2150128992111,728239356048,28038171048,jbm025,4,confirmed

@@ -23,7 +23,7 @@ import plotting
 
 ::: {.columns}
 ::: {.column width="60%"}
-- DP3 — LOFAR pipeline software (ASTRON): averaging, flagging, calibration, prediction
+- DP3: LOFAR pipeline software (ASTRON): averaging, flagging, calibration, prediction
 - Used for the preprocessing / self-calibration engine of the SKA Science Data Processor
 - Self-calibration alternates **predict** (simulate a model sky) and **solve** (fit corrections against it)
 :::
@@ -38,13 +38,13 @@ _ = plotting.predict_share()
 ## The predict step
 
 ::: {.columns}
-::: {.column width="70%"}
+::: {.column width="50%"}
 - Simulates model visibilities for every baseline × channel × correlation, from a sky model and a telescope model
 - Per source: simulate its contribution, accumulate into a per-patch buffer
 - Per patch: compute the beam response, apply it to that patch's buffer
 - Mostly DP3 internal implementation; calls EveryBeam for the beam response
 :::
-::: {.column width="30%"}
+::: {.column width="50%"}
 ```{python}
 plotting.reference_workload_table()
 ```
@@ -65,7 +65,7 @@ plotting.reference_workload_table()
 - Can result in a workload discrepancy
 - Beam computations are duplicated when shared among multiple threads
 :::
-::: {.column width="40%"}
+::: {.column width="40%" .nowrap}
 ```{python}
 plotting.baseline_headline_table()
 ```
@@ -87,10 +87,15 @@ plotting.baseline_utilization_stats()
 ```
 
 ```{python}
-plotting.baseline_scaling_table()
+#| fig-height: 3.1
+bscale = plotting.scaling_efficiency("baseline_scaling.csv")
+_ = plotting.baseline_scaling_plot()
 ```
 
-- ~50% scaling efficiency
+- `{python} f"{bscale['lo']}→{bscale['hi']}"` threads:
+  **`{python} f"{bscale['speedup']:.1f}x"`** against an ideal
+  `{python} f"{bscale['ideal']:.0f}x"` —
+  `{python} f"{bscale['efficiency_pct']:.0f}%"` scaling efficiency
 :::
 :::
 
@@ -101,13 +106,13 @@ plotting.baseline_scaling_table()
 _ = plotting.per_thread_load()
 ```
 
-- Flat iteam/thread count
+- Flat item/thread count
 - Time spent per thread varies
 - Sources are heterogeneous:
     - point vs. Gaussian components cost different amounts of compute
     - and an equal-count split doesn't account for it
 
-## Dynamic dispatch via TBB
+## Dynamic dispatch via Intel Thread Building Blocks (TBB) library
 
 ```{python}
 #| fig-height: 4
@@ -125,36 +130,54 @@ plotting.work_stealing_diagram()
 plotting.tbb_vs_baseline_scaling()
 ```
 
-## Per-thread load — TBB
+## Per-thread load, TBB {.smaller}
 
 ```{python}
-#| fig-height: 4
-_ = plotting.tbb_per_thread_load()
+#| fig-height: 3.0
+tbb_load = plotting.tbb_per_thread_load()
+work = plotting.dispatch_work_totals()
 ```
 
-- Same heterogeneous sources, same 72 threads
-- Work stealing keeps the spread far tighter than the static split (slide 6)
-- Residual spread: whatever's left once dispatch stops being the bottleneck
+::: {.columns}
+::: {.column width="54%"}
+- Work stealing redistributes work ☭: `{python} f"{tbb_load['items_min']}–{tbb_load['items_max']}"`
+  items per thread, against a flat 348 for the static split
+- Much better per-thread time balance
+- Only `{python} f"{work['makespan_gain_pct']:.0f}%"` of total time saved:
+  total work grew
+  `{python} f"{work['work_growth_pct']:.0f}%"`
+  (`{python} f"{work['static_total_s']:.0f}"` → `{python} f"{work['tbb_total_s']:.0f}"` thread-seconds)
+- Because of too many beam application calls that could be mutualized!
+:::
+::: {.column width="46%"}
+```{python}
+plotting.load_balance_table()
+```
+:::
+:::
 
-## TBB attempt: CPU usage over time
+## Removing the redundant beam applies {.smaller}
 
 ```{python}
-#| fig-height: 3.5
-plotting.cpu_utilization_timeline()
+#| fig-height: 2.5
+acc = plotting.patch_accumulator_cost()
+plotting.dispatch_variants_diagram()
 ```
 
-- Same near-idle setup phase either way — I/O bound, independent of dispatch
-- TBB reaches saturation a few seconds sooner once compute starts, and holds it slightly more smoothly
-- Consistent with the scaling result: a real but modest effect
+- Structural redundancy: a patch's beam apply fires once per patch
+  **per range**, so the finer the stealing, the more applies
+- Tried several variants:
+    - Patch parallelism: too coarse, compute time still heterogeneous
+    - Thread-local/patch-local accumulators: high memory consumption and high pressure on memory bandwidth
+    - Pipeline based approach with task stealing and queues: complex and low performance benefit
+
+    ==> General conclusion: tradeoff between parallelism efficiency and memory overhead
 
 ## Memory traffic
 
 ::: {.columns}
 ::: {.column width="55%"}
-- TBB's dynamic dispatch improved load balance
-- Effect on performance is not significant
-- Profiling shifted from scheduling to memory access pattern
-- Various experimental implementations with more memory accesses killed performance
+- Next step was to look at memory reads/writes and how to optimize them
 
 ```{python}
 #| fig-height: 3.5
@@ -175,106 +198,104 @@ plotting.memory_traffic_table()
 plotting.tiling_diagram()
 ```
 
-- Slab width rounded to a whole SIMD 512-bit vector width
+- Each thread works a channel slab × source block tile sized to stay inside
+  L2, instead of every source sweeping the full channel range
 - **Hypothesis**: expected to cut cache misses and reduce pressure on DDR
 
-## Impact of the new layout
+## Impact of the new layout {.smaller}
 
 ::: {.columns}
-::: {.column width="55%"}
-```{python}
-#| fig-height: 3.5
-plotting.tiling_diagram()
-```
-:::
 ::: {.column width="45%"}
 ```{python}
 #| fig-height: 3.5
 layout = plotting.progression_bars("tiled_layout")
 ```
 :::
+::: {.column width="55%"}
+- `{python} f"{plotting.fmt_int_html(layout['before'])}s → {plotting.fmt_int_html(layout['after'])}s"` predict time,
+  **`{python} f"{layout['speedup']:.2f}x"`**
+- Beam applications are done on-the-fly for scalar sources
+  so the per-patch buffer round-trip disappears
+  `{python} f"{work['static_beam_s']:.0f}"`s of thread time to
+  `{python} f"{work['tiled_beam_s']:.1f}"`s
+:::
 :::
 
-Benefit of the new layout: `{python} f"{layout['before']:.0f}s → {layout['after']:.0f}s"` predict
-time, `{python} f"{layout['speedup']:.2f}x"`.
+## Vectorizing the inner loops {.smaller}
 
-## Split real/imaginary planes
+```{python}
+loops = plotting.loop_progression()
+```
 
 ::: {.columns}
-::: {.column width="55%"}
+::: {.column width="52%"}
 ```{python}
-#| fig-height: 2.2
-plotting.split_planes_diagram()
-```
-
-- Accumulate into two separate `float` arrays (real, imaginary) instead of interleaved `complex<double>` structure-of-arrays instead of array-of-structs
-- Interleave back into complex output happens once per tile instead of once per source
-:::
-::: {.column width="45%"}
-```{python}
-#| fig-height: 3.5
-_ = plotting.progression_bars("split_planes")
+#| fig-height: 4.6
+plotting.inner_loop_diagram()
 ```
 :::
+::: {.column width="48%"}
+```{python}
+#| fig-height: 2.7
+plotting.loop_progression_bars()
+```
+
+- Accumulate into two `float` planes instead of interleaved
+  `complex<double>` — contiguous lanes, and the interleave back happens
+  once per tile instead of once per source
+- Slab rounded to a whole vector width, so there is no ragged epilogue at
+  every slab
+- `xsimd::sincos` in `phases()` and `xsimd::exp` in the Gaussian envelope
+- Combined performance gain:
+  `{python} f"{loops['before']:.2f}s → {loops['after']:.2f}s"` per normal
+  timestep, **`{python} f"{loops['speedup']:.1f}x"`**
+  (`{python} f"{loops['total_speedup']:.2f}x"` on the whole predict step)
+:::
 :::
 
-## Slab sizing / AVX-512 alignment
+## Why the totals move less {.smaller}
 
 ::: {.columns}
-::: {.column width="55%"}
-```{python}
-#| fig-height: 2.4
-plotting.slab_sizing_diagram()
-```
-
-- Slab sizes to perfectly match L2 budget lands on 53 channels => epilogue at every SIMD width
-- Rounded to a multiple of the vector width (48)
-:::
 ::: {.column width="45%"}
 ```{python}
-#| fig-height: 3.5
-_ = plotting.progression_bars("slab_rounding")
+#| fig-height: 3.4
+am = plotting.amdahl_split()
 ```
 :::
-:::
-
-## SIMD (`xsimd::sincos`, `xsimd::exp`)
-
-::: {.columns}
 ::: {.column width="55%"}
+- Everything on the last four slides acts on the simulation step
+- Beam compute is not affected, the only difference comes from doing less of it
+- The beam is now **`{python} f"{am['beam_share_pct']:.0f}%"`** of the predict step
+:::
+:::
+
+## Per-thread load — final {.smaller}
+
 ```{python}
-#| fig-height: 2.4
-plotting.simd_lanes_diagram()
+#| fig-height: 3.0
+final_load = plotting.final_per_thread_load()
+gran = plotting.tile_granularity()
 ```
 
-- GCC won't auto-vectorize `sin`/`cos`/`exp` without `-ffast-math`, which DP3 already rejected project-wide over NaN handling
-- `xsimd::sincos` in `phases()` — station × channel phase shifts, every source
-- `xsimd::exp` in the Gaussian source model — the uv-space envelope factor, every Gaussian source × baseline × channel (point sources skip this entirely, part of why they're cheaper — see the per-thread load slide)
-- Both explicit SIMD, not a compiler flag — bit-identical output either way
-:::
-::: {.column width="45%"}
-```{python}
-#| fig-height: 3.5
-_ = plotting.progression_bars("simd_sincos")
-```
-:::
-:::
+- Beam application for scalar sources is now contained in simulate(), the remainder is for Gaussian sources
+- Residual spread is a granularity floor: going finer leads to worse performance
 
 ## Final results
 
 ```{python}
 #| fig-height: 3.5
 final = plotting.final_scaling()
+bal = plotting.load_balance_stats()
 ```
 
-- **`{python} f"{final['speedup']:.1f}x"`** predict step, upstream → current (`{python} f"{final['upstream']:.0f}s → {final['final_100ts']:.0f}s"`)
-- **`{python} f"{final['efficiency_pct']:.0f}%"`** scaling efficiency, 2→72 threads — clean and monotonic, unlike the TBB attempt's ceiling
-- Hypothesis from the tiling slide confirmed: memory access order was the bottleneck, not scheduling
+- **`{python} f"{final['speedup']:.1f}x"`** faster predict step, upstream → current (`{python} f"{plotting.fmt_int_html(final['upstream'])}s → {plotting.fmt_int_html(final['final_100ts'])}s"`)
 
 ## Conclusion / discussion
 
-- Correctness: bit-identical off-beam, no regression from the rewrite
-- What's left: the beam (EveryBeam, untouched) is now the dominant remaining cost
-  - `expf64` — the complex exponential behind beam steering — is a quarter of all CPU time in the full pipeline profile, the single largest function in the application
-  - Same shape of problem as the `sincos` win on slide 16: a regular grid of stations × elements × channels, well suited to explicit SIMD — but the work is in EveryBeam, not DP3
-- Takeaway: a better scheduler alone had a ceiling close to the baseline; the real gain came from reordering memory access
+- Correctness: unit tests + results validated on a test realistic test case
+- Good performance gains through a loop reordering
+- Takeaway:
+  - a better scheduler alone had a ceiling close to the baseline
+  - it balanced the threads much better
+  - but paid for it in both compute and memory accesses from redundant per-patch work
+  - the real gain came from reordering memory access

@@ -13,8 +13,8 @@ $orange: #f08a4b;
 $teal: #2bd0a0;
 
 $presentation-heading-color: #f4f6fb;
-$presentation-heading-font: "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
-$presentation-font-family: "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+$presentation-heading-font: Helvetica, Arial, sans-serif;
+$presentation-font-family: Helvetica, Arial, sans-serif;
 $presentation-font-size-root: 22px;
 $presentation-line-height: 1.45;
 
@@ -103,8 +103,14 @@ $selection-bg: rgba($teal, 0.35);
   color: $link-color-hover;
 }
 
-// Bullets: subtle marker instead of the default disc, matches the accent palette
-.reveal ul {
+// Bullets: subtle marker instead of the default disc, matches the accent palette.
+// Each nesting level needs its own selector: reveal ships
+// `.reveal ul ul {list-style-type: square}` and `.reveal ul ul ul {…circle}`,
+// which outrank a bare `.reveal ul` on specificity - so a nested item kept
+// its native square marker *and* got the ::before dash below.
+.reveal ul,
+.reveal ul ul,
+.reveal ul ul ul {
   list-style: none;
 }
 .reveal ul li {
@@ -156,6 +162,13 @@ $selection-bg: rgba($teal, 0.35);
 }
 .reveal table tr:hover td {
   background: rgba(255, 255, 255, 0.03);
+}
+
+// Opt-in: keep every cell on one line. Deliberately not the default -
+// slide 3's machine description is a sentence and needs to wrap.
+.reveal .nowrap table th,
+.reveal .nowrap table td {
+  white-space: nowrap;
 }
 
 // Figures: matplotlib output rendered transparent, drop a soft card behind it
