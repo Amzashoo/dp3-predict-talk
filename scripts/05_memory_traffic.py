@@ -40,9 +40,21 @@ sys.path.insert(0, os.environ.get(
 import common
 
 # An ITT task marks only the thread that opens it, so worker-level tasks are
-# needed too: "predict_range" (baseline) and TBB's own "tbb_parallel_for".
-PREDICT_TASKS = {"beam_predict", "normal_predict", "tbb_parallel_for",
-                 "predict_range"}
+# needed too. Worker tasks are named by phase (predict_range_normal /
+# _beam) so the beam-recompute timesteps can be dropped: they are EveryBeam,
+# untouched by this work, and ~79% of the final build's predict time - left
+# in, they dominate the aggregate and dilute the kernel's own numbers.
+# "predict_range" (unsuffixed) is the pre-2026-09 name, kept so old result
+# dirs still parse.
+NORMAL_TASKS = {"normal_predict", "predict_range_normal"}
+BEAM_TASKS = {"beam_predict", "predict_range_beam"}
+# Phase-agnostic: TBB's own hook and the legacy worker name carry no phase,
+# so they can only be counted in the "all" scope.
+UNPHASED_TASKS = {"tbb_parallel_for", "predict_range"}
+PREDICT_TASKS = NORMAL_TASKS | BEAM_TASKS | UNPHASED_TASKS
+
+# scope -> the task rows it sums. "normal" is what the kernel slides quote.
+SCOPES = {"all": PREDICT_TASKS, "normal": NORMAL_TASKS}
 
 # label -> (row name, useoriginalpredict value). `baseline` and `tbb` both
 # take true and differ only by which binary is passed - check the path.
@@ -53,13 +65,14 @@ LABELS = {
 }
 
 
-def parse_task_report(text: str) -> dict:
+def parse_task_report(text: str, scope: str = "all") -> dict:
     """Aggregate the predict-only task rows from a `-group-by task` CSV
     report: raw counts (loads/stores/LLC misses) are summed, percentages
     are averaged weighted by each task's CPU Time (non-overlapping self
     time, so it's a valid weight)."""
     all_rows = list(csv.DictReader(io.StringIO(text)))
-    rows = [r for r in all_rows if r["Task Type"] in PREDICT_TASKS]
+    wanted = SCOPES[scope]
+    rows = [r for r in all_rows if r["Task Type"] in wanted]
     if not rows:
         raise RuntimeError("no predict-task rows in vtune -group-by task report - "
                             "was the binary built with -DDP3_ENABLE_ITT=ON?")
@@ -73,7 +86,7 @@ def parse_task_report(text: str) -> dict:
     # produced a complete, plausible, wrong table once. Healthy is 86-87%.
     measured = sum(f(r, "CPU Time") for r in all_rows)
     coverage = total_cpu_time / measured if measured else 0.0
-    if coverage < 0.6:
+    if scope == "all" and coverage < 0.6:
         outside = {r["Task Type"]: round(f(r, "CPU Time"), 1) for r in all_rows
                    if r["Task Type"] not in PREDICT_TASKS}
         raise RuntimeError(
@@ -106,10 +119,10 @@ MEDIAN_CSV = common.DATA_DIR / "memory_traffic.csv"
 
 METRICS = ["memory_bound_pct", "l1_bound_pct", "l2_bound_pct", "l3_bound_pct",
            "dram_bound_pct", "store_bound_pct", "loads", "stores", "llc_miss_count"]
-RUN_FIELDS = ["implementation", "job_id", "node", "result_dir"] + METRICS
+RUN_FIELDS = ["implementation", "phase", "job_id", "node", "result_dir"] + METRICS
 
 
-def append_run(row: dict):
+def append_runs(rows: list):
     """Appends one measured run to memory_traffic_runs.csv (the raw record,
     one line per run) rather than overwriting a single-value table.
 
@@ -119,12 +132,30 @@ def append_run(row: dict):
     last. memory_traffic.csv is derived from this file, never edited by
     hand.
     """
+    # Migrate a stale header before appending: adding a field to RUN_FIELDS
+    # while the file on disk still carries the old one writes every new row
+    # shifted by a column, which only surfaces later as a float() error on a
+    # result-dir string. Cost one 15-run job once.
+    if RUNS_CSV.exists():
+        with open(RUNS_CSV, newline="") as f:
+            existing = list(csv.reader(f))
+        if existing and existing[0] != RUN_FIELDS:
+            width = len(existing[0])
+            fixed = [RUN_FIELDS]
+            for row in existing[1:]:
+                if len(row) == width and "phase" not in existing[0]:
+                    row = row[:1] + ["all"] + row[1:]
+                fixed.append(row)
+            with open(RUNS_CSV, "w", newline="") as f:
+                csv.writer(f).writerows(fixed)
+
     is_new = not RUNS_CSV.exists()
     with open(RUNS_CSV, "a", newline="") as f:
         w = csv.DictWriter(f, fieldnames=RUN_FIELDS)
         if is_new:
             w.writeheader()
-        w.writerow({k: row.get(k, "") for k in RUN_FIELDS})
+        for row in rows:
+            w.writerow({k: row.get(k, "") for k in RUN_FIELDS})
 
 
 def write_median_table():
@@ -143,11 +174,15 @@ def write_median_table():
     """
     with open(RUNS_CSV) as f:
         runs = list(csv.DictReader(f))
+    # Rows written before the phase split have no phase - they are predict-wide.
+    for r in runs:
+        r["phase"] = r.get("phase") or "all"
 
     impls = tuple(name for name, _ in LABELS.values())
     by_node = {}
     for r in runs:
-        by_node.setdefault(r["node"], set()).add(r["implementation"])
+        if r["phase"] == "all":
+            by_node.setdefault(r["node"], set()).add(r["implementation"])
     # later rows are later runs: take the last node covering both
     # A node qualifies only once it carries every implementation the deck
     # compares. Anything less and the table mixes machines.
@@ -168,20 +203,23 @@ def write_median_table():
         return (v[n // 2] if n % 2 else (v[n // 2 - 1] + v[n // 2]) / 2) if v else 0.0
 
     out, summary = [], []
-    for impl in impls:
-        mine = [r for r in runs if r["implementation"] == impl]
+    for phase in SCOPES:
+      for impl in impls:
+        mine = [r for r in runs
+                if r["implementation"] == impl and r["phase"] == phase]
         if not mine:
             continue
-        row = {"implementation": impl, "node": node, "n_runs": len(mine)}
+        row = {"implementation": impl, "phase": phase, "node": node,
+               "n_runs": len(mine)}
         for m in METRICS:
             med = median([r[m] for r in mine])
             row[m] = f"{med:.1f}" if m.endswith("_pct") else str(int(med))
         row["status"] = "confirmed"
         out.append(row)
-        summary.append((impl, row, len(mine)))
+        summary.append((f"{impl} [{phase}]", row, len(mine)))
 
     with open(MEDIAN_CSV, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["implementation"] + METRICS
+        w = csv.DictWriter(f, fieldnames=["implementation", "phase"] + METRICS
                            + ["node", "n_runs", "status"])
         w.writeheader()
         for row in out:
@@ -218,13 +256,17 @@ def collect(label: str, dp3_exe: str, env: dict) -> dict:
         env=env, capture_output=True, text=True, check=True,
     ).stdout
 
-    return {
+    common_fields = {
         "implementation": LABELS[label][0],
         "job_id": os.environ.get("SLURM_JOB_ID", ""),
         "node": os.environ.get("SLURMD_NODENAME", ""),
         "result_dir": result_dir.name,
-        **parse_task_report(task_report),
     }
+    # One row per scope from the same profile: "all" keeps the historical
+    # predict-wide number, "normal" isolates the timesteps this work touches.
+    return [dict(common_fields, phase=scope,
+                 **parse_task_report(task_report, scope))
+            for scope in SCOPES]
 
 
 def main():
@@ -260,7 +302,7 @@ def main():
             # trace, killed worker) and one failure used to lose every run
             # still queued behind it.
             try:
-                append_run(collect(label, exe, env))
+                append_runs(collect(label, exe, env))
             except (subprocess.CalledProcessError, RuntimeError) as exc:
                 print(f"  SKIPPED {label}: {exc}", flush=True)
     median = write_median_table()

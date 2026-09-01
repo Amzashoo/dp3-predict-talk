@@ -1,4 +1,7 @@
-implementation,memory_bound_pct,l1_bound_pct,l2_bound_pct,l3_bound_pct,dram_bound_pct,store_bound_pct,loads,stores,llc_miss_count,node,n_runs,status
-static_baseline,44.1,4.4,4.8,8.4,8.3,5.5,3981752115096,1544187980963,32633895791,jbm025,5,confirmed
-tbb_fixed,44.4,2.7,7.1,8.8,11.1,7.2,4455953913520,1662754763091,34265264475,jbm025,5,confirmed
-tiled_final,32.0,5.0,5.2,17.1,1.8,0.2,2150128992111,728239356048,28038171048,jbm025,4,confirmed
+implementation,phase,memory_bound_pct,l1_bound_pct,l2_bound_pct,l3_bound_pct,dram_bound_pct,store_bound_pct,loads,stores,llc_miss_count,node,n_runs,status
+static_baseline,all,52.2,4.4,4.3,8.4,8.0,5.3,3973140847324,1543492272369,32499272011,jbm034,5,confirmed
+tbb_fixed,all,54.3,2.2,6.7,6.1,13.3,8.9,6960119058654,2634356690886,39817965621,jbm034,4,confirmed
+tiled_final,all,30.7,4.9,4.8,15.6,1.9,0.2,2412439504007,788969790771,28253270496,jbm034,5,confirmed
+static_baseline,normal,77.4,1.1,5.5,1.4,16.7,10.6,1949911597179,720711874156,4784964528,jbm034,5,confirmed
+tbb_fixed,normal,75.7,1.0,6.7,1.3,19.3,12.7,2130701934381,825558521528,5061829330,jbm034,4,confirmed
+tiled_final,normal,12.8,3.9,0.4,0.6,2.9,0.9,221889893550,50914454870,327253595,jbm034,5,confirmed

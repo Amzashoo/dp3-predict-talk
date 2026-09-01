@@ -199,6 +199,15 @@ $selection-bg: rgba($red, 0.16);
 }
 .reveal table tr:hover td { background: $stock-2; }
 
+// Opt-in: centre a table in its column. `.reveal table` above sets
+// `margin: 0.6em 0`, which pins it left, so this needs the extra
+// specificity to win.
+.reveal .center-table table { margin-left: auto; margin-right: auto; }
+// The caption is a plain paragraph after the table; centre it too, but
+// only the paragraph - `text-align` on the wrapper would re-centre every
+// cell and undo the right-aligned numeric columns.
+.reveal .center-table p { text-align: center; }
+
 .reveal .nowrap table th,
 .reveal .nowrap table td { white-space: nowrap; }
 

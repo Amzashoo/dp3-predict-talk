@@ -105,6 +105,22 @@ def scaling_efficiency(csv_name: str) -> dict:
             "efficiency_pct": speedup / ideal * 100}
 
 
+def workload(quantity: str):
+    """One value from the configuration table on slide 3, so a slide can
+    quote it without hardcoding a second copy - same reason as ncores()."""
+    ref = pd.read_csv(DATA / "reference_workload.csv").set_index("quantity")
+    return ref.loc[quantity, "value"]
+
+
+def sweep_timesteps(csv_name: str) -> int:
+    """Timesteps behind a scaling sweep, so a figure can say which workload
+    it is: the sweeps are 30 timesteps, the progression numbers on slides
+    13/14/17 are the 100 of the configuration table."""
+    df = pd.read_csv(DATA / csv_name).set_index("threads")
+    hi = df.index.max()
+    return int(df.loc[hi, "n_normal"] + df.loc[hi, "n_beam"])
+
+
 # ---------------------------------------------------------------- slide 2 --
 def predict_share() -> dict:
     """Stacked bar: predict's share of total baseline pipeline time."""
@@ -244,6 +260,8 @@ def baseline_scaling_plot() -> dict:
     ax.minorticks_off()
     ax.set_xlabel("threads")
     ax.set_ylabel("predict time, s")
+    ax.set_title(f"{sweep_timesteps('baseline_scaling.csv')} timesteps",
+                 loc="left", fontsize=9, color=INK3)
     ax.legend(fontsize=9, **LEGEND)
 
     # Call out the shortfall where it is widest, at the full thread count.
@@ -360,7 +378,7 @@ def per_thread_load() -> dict:
 
 def tbb_per_thread_load() -> dict:
     """Slide 9: the TBB work-stealing build, the counterpart to slide 6."""
-    return _per_thread_load("tbb_histogram.csv", TEAL,
+    return _per_thread_load("tbb_histogram.csv", ORANGE,
                             "TBB per-thread histogram pending - run 08")
 
 
@@ -387,14 +405,20 @@ def load_balance_stats() -> dict:
     return {k: float(bal.loc[k, "utilization_pct"]) for k in bal.index}
 
 
-def load_balance_table() -> Markdown | None:
-    """The three dispatch strategies side by side on load balance.
+def load_balance_table(implementations=("static_baseline", "tbb")) -> Markdown | None:
+    """Dispatch strategies side by side on load balance.
 
     The per-thread bar charts show one timestep each; this is the metric
     measured over all 30, so it's what the claim should rest on.
     `utilization` is the average thread's busy time as a fraction of the
     timestep's makespan - 100% means every thread worked until the last
     one finished, lower means threads idled waiting on a straggler.
+
+    Defaults to the static/TBB pair: the only caller is the TBB slide, which
+    comes before the tiled build exists in the talk - a "tiled (final)"
+    column there gives away the ending and invites questions the audience
+    has had no setup for. Pass the third key explicitly if a later slide
+    wants all three.
     """
     path = DATA / "load_balance.csv"
     if not path.exists():
@@ -402,12 +426,10 @@ def load_balance_table() -> Markdown | None:
     bal = pd.read_csv(path).set_index("implementation")
     names = {"static_baseline": "static split", "tbb": "TBB stealing",
              "tiled_final": "tiled (final)"}
-    present = [k for k in names if k in bal.index]
+    present = [k for k in implementations if k in bal.index and k in names]
     if not present:
         return None
 
-    # Every column must come from the same timer, or rows measured with
-    # different ones read as a difference between implementations.
     stages = {str(bal.loc[k, "stage"]) if "stage" in bal.columns else ""
               for k in present}
     if len(stages) > 1:
@@ -421,8 +443,6 @@ def load_balance_table() -> Markdown | None:
 
     header = "| metric | " + " | ".join(names[k] for k in present) + " |\n"
     header += "|---" + "|---:" * len(present) + "|\n"
-    # One decimal, not zero: 99.6% renders as "100%" at .0f, which reads as
-    # perfect balance rather than near-perfect, and 0.6% spread as "1%".
     rows = [
         ("thread utilization", "utilization_pct", "{:.1f}%"),
         ("time spread", "spread_pct", "{:.1f}%"),
@@ -437,7 +457,7 @@ def load_balance_table() -> Markdown | None:
              else f"`{stage}` only")
     return Markdown(
         header + body
-        + f"\n\nOver {scope}, per timestep, averaged over {n}."
+        + f"\n\nOver {scope}, per timestep, averaged over {n} timesteps."
     )
 
 
@@ -503,6 +523,8 @@ def tile_granularity() -> dict:
 _APPLY_WIDTHS = [1.0, 2.6, 0.6, 1.8, 0.8, 3.0, 1.3, 0.7, 2.2, 1.5,
                  0.9, 2.8, 1.1, 0.6, 2.0, 1.6, 0.8, 2.4, 1.2, 0.7]
 _APPLY_BASE = 0.07
+_APPLY = "#f5c95b"
+_APPLY_EDGE = "#8a5a0f"
 
 
 def dispatch_variants_diagram() -> None:
@@ -546,7 +568,7 @@ def dispatch_variants_diagram() -> None:
                 centre = x0 + length * (k + 0.5) / n
                 ax.add_patch(mpatches.Rectangle(
                     (centre - w / 2, y), w, height,
-                    facecolor=ORANGE, alpha=0.95, linewidth=0))
+                    facecolor=_APPLY, alpha=0.95, linewidth=0))
 
     def pipeline_panel(ax, title, verdict):
         """A pipeline graph rather than a thread timeline: sources feed a
@@ -557,7 +579,8 @@ def dispatch_variants_diagram() -> None:
         ax.add_patch(mpatches.Rectangle((0.5, 7.0), 3.6, 1.3, facecolor=BLUE, **box))
         ax.text(2.3, 7.65, "simulate\nsources", ha="center", va="center",
                 fontsize=8, color="white")
-        ax.add_patch(mpatches.Rectangle((5.9, 7.0), 3.6, 1.3, facecolor=ORANGE, **box))
+        ax.add_patch(mpatches.Rectangle((5.9, 7.0), 3.6, 1.3, facecolor=_APPLY,
+                                        alpha=0.85, edgecolor=_APPLY_EDGE, linewidth=0.9))
         ax.text(7.7, 7.65, "beam\napply", ha="center", va="center",
                 fontsize=8, color=INK)
         ax.annotate("", xy=(5.8, 7.65), xytext=(4.2, 7.65),
@@ -594,13 +617,15 @@ def dispatch_variants_diagram() -> None:
     # Panel 3: the buffer stack that makes it a memory problem.
     for i in range(7):
         axes[2].add_patch(mpatches.Rectangle((8.7, 3.4 + i * 0.55), 0.9, 0.42,
-                                             facecolor=ORANGE, alpha=0.5))
+                                             facecolor=_APPLY, alpha=0.6,
+                                             edgecolor=_APPLY_EDGE, linewidth=0.7))
     axes[2].text(9.15, 7.6, "1 buffer\nper patch", fontsize=7.5, color="#8a5a0f",
                  ha="center", va="bottom")
 
     legend = [
         mpatches.Patch(facecolor=BLUE, alpha=0.85, label="simulating sources"),
-        mpatches.Patch(facecolor=ORANGE, alpha=0.95, label="beam apply"),
+        mpatches.Patch(facecolor=_APPLY, alpha=0.95, edgecolor=_APPLY_EDGE,
+                       label="beam apply"),
         mpatches.Patch(facecolor="none", edgecolor=INK3, hatch="////", label="idle"),
     ]
     fig.legend(handles=legend, fontsize=8.5, ncol=3, **LEGEND,
@@ -632,65 +657,107 @@ def patch_accumulator_cost() -> dict:
 
 
 # ---------------------------------------------------------------- slide 7 --
-def work_stealing_diagram() -> None:
-    """Static equal split leaves one thread idle once its slice is done
-    while another is still working through a longer one; TBB's queue lets
-    the idle thread steal a remaining task off the busy thread's queue."""
+# Four threads' queues, drawn to show the mechanism rather than measured.
+# T1's slice is short and T3's is long, which is what leaves a static split
+# with an idle thread and gives TBB something to steal.
+_WS_TASKS = {0: [1.0, 0.9, 1.1], 1: [0.5], 2: [0.8, 0.7, 0.6], 3: [1.2, 1.3, 0.9, 0.6]}
+# Where frame 3 ends up: T1 has taken the tail of T3's queue twice.
+_WS_STOLEN = {1: [0.6, 0.9]}
+_WS_LEFT = {3: 2}  # tasks left on T3 once those two are gone
+
+
+def work_stealing_diagram(frame: int = 3) -> None:
+    """Static equal split leaves one thread idle once its slice is done while
+    another is still working through a longer one; TBB's queue lets the idle
+    thread steal a remaining task off the busy thread's queue.
+
+    `frame` steps the right panel: 1 = T1 runs dry, 2 = the steal, 3 = queues
+    drained. Slide 7 stacks the three in an .r-stack of reveal fragments, so
+    clicking through animates the steal; the left panel never changes.
+    """
     fig, axes = plt.subplots(1, 2, figsize=(10, 4.5))
 
-    tasks = {
-        0: [1.0, 0.9, 1.1],
-        1: [0.5],
-        2: [0.8, 0.7, 0.6],
-        3: [1.2, 1.3, 0.9, 0.6],
-    }
-    width = 0.8
+    tasks = _WS_TASKS
+    width, y0 = 0.8, 0.3
     x_pos = {i: 0.6 + i * 1.15 for i in tasks}
+    makespan = y0 + max(sum(v) for v in tasks.values())
 
-    def draw_stack(ax, heights, x, color, y0=0.3):
-        y = y0
+    def draw_stack(ax, heights, x, colour, y=y0, alpha=0.85):
         for h in heights:
-            ax.add_patch(mpatches.Rectangle((x, y), width, h - 0.06, facecolor=color, alpha=0.85))
+            ax.add_patch(mpatches.Rectangle((x, y), width, h - 0.06,
+                                            facecolor=colour, alpha=alpha))
             y += h
         return y
 
-    def base(ax, title):
+    def idle(ax, x, top, ceiling=None, label=False):
+        ceiling = makespan if ceiling is None else ceiling
+        if top >= ceiling - 1e-9:
+            return
+        ax.add_patch(mpatches.Rectangle((x, top), width, ceiling - top,
+                                        facecolor="none", edgecolor=INK3,
+                                        hatch="////", linewidth=0.8))
+        if label:
+            ax.text(x + width / 2, (top + ceiling) / 2, "idle", rotation=90,
+                    ha="center", va="center", fontsize=9, color=INK2,
+                    bbox=dict(facecolor="#f7f8f6", edgecolor="none", pad=1.5))
+
+    def base(ax, title, caption=""):
         ax.set_xlim(0, 5.2)
         ax.set_ylim(0, 5.4)
         ax.set_title(title, loc="left", fontsize=11)
         ax.axis("off")
         for i in tasks:
-            ax.text(x_pos[i] + width / 2, -0.25, f"T{i}", ha="center", fontsize=9, color=INK2)
+            ax.text(x_pos[i] + width / 2, -0.25, f"T{i}", ha="center",
+                    fontsize=9, color=INK2)
+        ax.plot([0.35, 5.0], [makespan, makespan], ls="--", lw=0.9, color=INK3)
+        ax.text(5.0, makespan + 0.08, "makespan", ha="right", fontsize=8, color=INK3)
+        if caption:
+            ax.text(0.35, 5.05, caption, fontsize=8.5, color=INK2)
 
-    # left: static split - T1's slice is short, it idles once done
+    # left: static split - one slice per thread, the short ones then idle
     ax = axes[0]
-    base(ax, "Static equal split")
-    tops = {i: draw_stack(ax, tasks[i], x_pos[i], BLUE) for i in tasks}
-    busiest, top_max = max(tops.items(), key=lambda kv: kv[1])
-    idle_from = tops[1]
-    ax.add_patch(mpatches.Rectangle((x_pos[1], idle_from), width, top_max - idle_from,
-                                     facecolor="none", edgecolor=INK3, hatch="////", linewidth=0.8))
-    ax.text(x_pos[1] + width / 2, (idle_from + top_max) / 2, "idle", rotation=90,
-            ha="center", va="center", fontsize=8, color=INK3)
-    ax.text(x_pos[busiest] + width / 2, top_max + 0.15, "still working", ha="center",
-            fontsize=8, color=ORANGE)
+    base(ax, "Static equal split", "one fixed slice per thread")
+    for i in tasks:
+        idle(ax, x_pos[i], draw_stack(ax, tasks[i], x_pos[i], BLUE), label=(i == 1))
 
-    # right: work stealing - T1 steals T3's last remaining task
+    # right: the same queues, stepped through the steal
     ax = axes[1]
-    base(ax, "TBB work stealing")
-    stolen = tasks[3][-1]
-    remaining3 = tasks[3][:-1]
-    draw_stack(ax, tasks[0], x_pos[0], BLUE)
-    draw_stack(ax, tasks[1], x_pos[1], BLUE)
-    draw_stack(ax, tasks[2], x_pos[2], BLUE)
-    top3 = draw_stack(ax, remaining3, x_pos[3], BLUE)
-    y1_before = 0.3 + sum(tasks[1])
-    ax.add_patch(mpatches.Rectangle((x_pos[1], y1_before), width, stolen - 0.06,
-                                     facecolor=TEAL, alpha=0.9))
-    ax.annotate("steal", xy=(x_pos[1] + width / 2, y1_before + stolen / 2),
-                xytext=(x_pos[3] + width / 2, top3 + stolen / 2),
-                arrowprops=dict(arrowstyle="->", color=TEAL, lw=1.6, connectionstyle="arc3,rad=-0.3"),
-                fontsize=8, color=TEAL, ha="center", va="center")
+    captions = {1: "T1 runs dry while T3 still has work queued",
+                2: "the idle thread takes the tail of the busy queue",
+                3: "repeat until every queue is empty"}
+    base(ax, "TBB work stealing", captions[frame])
+
+    if frame < 3:
+        tops = {i: draw_stack(ax, tasks[i], x_pos[i], BLUE) for i in tasks}
+        idle(ax, x_pos[1], tops[1], label=(frame == 1))
+        tail = tasks[3][-1]
+        ax.add_patch(mpatches.Rectangle((x_pos[3], tops[3] - tail), width,
+                                        tail - 0.06, facecolor="none",
+                                        edgecolor=ORANGE, linewidth=1.6, linestyle="--"))
+        if frame == 2:
+            # ghost slot on T1, so the arrow has a visible destination
+            ax.add_patch(mpatches.Rectangle((x_pos[1], tops[1]), width, tail - 0.06,
+                                            facecolor=ORANGE, alpha=0.25,
+                                            edgecolor=ORANGE, linewidth=1.2,
+                                            linestyle="--"))
+            ax.annotate("", xy=(x_pos[1] + width, tops[1] + tail / 2),
+                        xytext=(x_pos[3], tops[3] - tail / 2),
+                        arrowprops=dict(arrowstyle="->", color=ORANGE, lw=1.8,
+                                        connectionstyle="arc3,rad=0.25"))
+            ax.text((x_pos[1] + x_pos[3]) / 2 + width / 2, 4.68, "steal",
+                    fontsize=9.5, color=ORANGE, ha="center")
+    else:
+        tops = {}
+        for i in tasks:
+            own = tasks[i][:_WS_LEFT[i]] if i in _WS_LEFT else tasks[i]
+            top = draw_stack(ax, own, x_pos[i], BLUE)
+            tops[i] = draw_stack(ax, _WS_STOLEN.get(i, []), x_pos[i], ORANGE, y=top)
+        new_makespan = max(tops.values())
+        for i in tasks:
+            idle(ax, x_pos[i], tops[i], ceiling=new_makespan)
+        ax.plot([0.35, 5.0], [new_makespan, new_makespan], lw=1.6, color=ORANGE)
+        ax.text(5.0, new_makespan + 0.1, "new makespan", ha="right",
+                fontsize=8, color=ORANGE)
 
     plt.tight_layout()
     plt.show()
@@ -711,6 +778,8 @@ def tbb_vs_baseline_scaling() -> Markdown:
     ax.set_xticklabels(sc_ok["threads"].astype(int))
     ax.set_xlabel("threads")
     ax.set_ylabel("aggregate predict time, s")
+    ax.set_title(f"{sweep_timesteps('baseline_scaling.csv')} timesteps",
+                 loc="left", fontsize=9, color=INK3)
     ax.legend(**LEGEND)
     plt.tight_layout()
     plt.show()
@@ -727,8 +796,12 @@ def tbb_vs_baseline_scaling() -> Markdown:
     # as the result it is. Report the two directions separately.
     gain, loss = pct[pct > 0], pct[pct <= 0]
     if loss.empty:
+        best = int(sc_ok.loc[gain.idxmax(), "threads"])
+        hi = sc_ok["threads"].idxmax()
         lead = (f"**{gain.min():.0f}–{gain.max():.0f}% faster** than the static "
-                f"baseline at every measured thread count{note}")
+                f"baseline at every measured thread count{note} — "
+                f"{gain.max():.0f}% at {best} threads, but "
+                f"{pct[hi]:.0f}% at {int(sc_ok.loc[hi, 'threads'])}")
     else:
         slow = ", ".join(str(int(t)) for t in sc_ok.loc[loss.index, "threads"])
         lead = (f"**{gain.min():.0f}–{gain.max():.0f}% faster** at "
@@ -746,10 +819,77 @@ _MEM_PAIR = {"static_baseline": ("static split", BLUE),
              "tbb_fixed": ("TBB stealing", ORANGE)}
 
 
+def _memory_traffic(phase: str = "normal") -> pd.DataFrame:
+    """memory_traffic.csv for one measurement scope.
+
+    "normal" is the timesteps this work touches; "all" also includes the two
+    beam-recompute timesteps, which are EveryBeam and ~79% of the final
+    build's predict time - left in, they dilute the kernel's own numbers.
+    Falls back to whatever the file has: rows measured before the phase split
+    carry no phase column at all.
+    """
+    mem = pd.read_csv(DATA / "memory_traffic.csv")
+    if "phase" not in mem.columns:
+        return mem
+    wanted = mem[mem["phase"] == phase]
+    return wanted if not wanted.empty else mem[mem["phase"] == "all"]
+
+
+def tiled_memory_table() -> Markdown:
+    """Before/after on the memory metrics, for the tiling slide.
+
+    Scoped to the simulation phase - see _memory_traffic(). Stated as a
+    table rather than a run of inline numbers: four metrics each with a
+    before and an after is more than a sentence carries.
+    """
+    mem = _memory_traffic().set_index("implementation")
+    base, tiled = mem.loc["static_baseline"], mem.loc["tiled_final"]
+    rows = [
+        ("memory bound", "memory_bound_pct", "{:.0f}%"),
+        ("DRAM bound", "dram_bound_pct", "{:.0f}%"),
+        ("store bound", "store_bound_pct", "{:.1f}%"),
+    ]
+    body = "\n".join(
+        f"| {label} | {fmt.format(float(base[col]))} | "
+        f"**{fmt.format(float(tiled[col]))}** | "
+        f"{float(base[col]) / float(tiled[col]):.1f}× |"
+        for label, col, fmt in rows
+    )
+    b_llc, t_llc = float(base["llc_miss_count"]), float(tiled["llc_miss_count"])
+    body += (f"\n| LLC misses | {b_llc / 1e9:.1f} B | **{t_llc / 1e9:.2f} B** | "
+             f"{b_llc / t_llc:.1f}× |")
+    return Markdown(
+        "| | original | tiled | |\n|---|---:|---:|---:|\n" + body
+        + "\n\nMemory traffic analysis of the simulation phase of the prediction step."
+    )
+
+
+def tiled_memory_gain() -> dict | None:
+    """Baseline -> tiled memory-stall metrics, for the hypothesis stated on
+    the tiling slide.
+
+    Reported on slide 13 rather than 11: slide 11 sits before the tiled build
+    exists in the story. Note llc_miss_count barely moves - the win is that
+    the traffic stops stalling (slab-sequential, prefetchable), not that
+    there is less of it, so the slide leads on the stall fractions.
+    """
+    mem = _memory_traffic().set_index("implementation")
+    if not {"static_baseline", "tiled_final"} <= set(mem.index):
+        return None
+    base, tiled = mem.loc["static_baseline"], mem.loc["tiled_final"]
+    out = {}
+    for col in ("memory_bound_pct", "dram_bound_pct", "store_bound_pct",
+                "l3_bound_pct"):
+        out[f"base_{col}"] = float(base[col])
+        out[f"tiled_{col}"] = float(tiled[col])
+    out["llc_ratio"] = float(base["llc_miss_count"]) / float(tiled["llc_miss_count"])
+    return out
+
+
 def memory_traffic_bars() -> Markdown | None:
     """Where the stalls are, static baseline vs. TBB. Slide 11 sits before
     the tiled build exists in the story, so it compares only those two."""
-    mem = pd.read_csv(DATA / "memory_traffic.csv")
+    mem = _memory_traffic()
     mem = mem[mem["status"] == "confirmed"].set_index("implementation")
     pair = [k for k in _MEM_PAIR if k in mem.index]
     if len(pair) < 2:
@@ -776,7 +916,7 @@ def memory_traffic_bars() -> Markdown | None:
 
 def memory_traffic_table() -> Markdown | None:
     """Raw counts behind the bars: what actually moved, baseline vs. TBB."""
-    mem = pd.read_csv(DATA / "memory_traffic.csv")
+    mem = _memory_traffic()
     mem = mem[mem["status"] == "confirmed"].set_index("implementation")
     if any(k not in mem.index for k in _MEM_PAIR):
         return None
@@ -1094,6 +1234,8 @@ def amdahl_split() -> dict:
     ax.set_xticks(x)
     ax.set_xticklabels(["baseline", "final"])
     ax.set_ylabel("predict step, s")
+    ax.set_title(f"{sweep_timesteps('baseline_scaling.csv')} timesteps",
+                 loc="left", fontsize=9, color=INK3)
     ax.legend(fontsize=9, **LEGEND)
     for xi, (n, b) in zip(x, ((bn, bb), (fn, fb))):
         ax.text(xi, n + b + 8, f"{fmt_int(n + b)}s", ha="center", fontsize=9)
@@ -1104,6 +1246,98 @@ def amdahl_split() -> dict:
             "final_beam": fb, "normal_speedup": bn / fn,
             "beam_speedup": bb / fb,
             "beam_share_pct": fb / (fn + fb) * 100}
+
+
+def gains_summary() -> dict:
+    """Three panels: what the work bought, and what it cost memory.
+
+    One measure per panel - predict time, stall fraction, miss count are
+    three scales and a shared axis would misrepresent two of them.
+
+    Panels 2 and 3 carry both measurement scopes side by side on purpose.
+    The predict-wide column includes the two beam-recompute timesteps, which
+    are EveryBeam and untouched by this work; on the tiled build they are
+    ~79% of predict time, so they swamp the aggregate. Showing only the
+    scoped column would look like special pleading; showing both makes the
+    dilution the point.
+    """
+    order = ["static_baseline", "tbb_fixed", "tiled_final"]
+    labels = ["original", "TBB", "final"]
+    colors = [BLUE, ORANGE, TEAL]
+
+    # Predict time: all three from the same 30-timestep sweep at full thread
+    # count, so the triple is internally consistent. The 1161s headline
+    # elsewhere is a 100-timestep run and must not be mixed in here.
+    base = pd.read_csv(DATA / "baseline_scaling.csv").set_index("threads")
+    tbb = pd.read_csv(DATA / "tbb_vs_baseline_scaling.csv").set_index("threads")
+    fin = pd.read_csv(DATA / "final_scaling.csv").set_index("threads")
+    threads = base.index.max()
+    predict = [base.loc[threads, "predict_agg_s"],
+               tbb.loc[threads, "tbb_predict_agg_s"],
+               fin.loc[threads, "predict_agg_s"]]
+
+    mem = pd.read_csv(DATA / "memory_traffic.csv")
+    scopes = [("normal", "simulation\nphase only"), ("all", "whole\npredict step")]
+
+    def series(phase, column, scale=1.0):
+        d = mem[mem["phase"] == phase].set_index("implementation")
+        return [d.loc[i, column] / scale for i in order]
+
+    fig, axes = plt.subplots(1, 3, figsize=(11.4, 3.6))
+
+    # --- panel 1: what it bought
+    ax = axes[0]
+    ax.bar(range(3), predict, color=colors, width=0.62)
+    ax.set_xticks(range(3))
+    ax.set_xticklabels(labels)
+    ax.set_ylabel("predict step, s")
+    ax.set_ylim(0, max(predict) * 1.22)
+    for i, v in enumerate(predict):
+        ax.text(i, v + max(predict) * 0.03, f"{fmt_int(v)}s", ha="center",
+                fontsize=9, color=INK)
+    ax.set_title(f"Predict time ({threads} threads, "
+                 f"{sweep_timesteps('baseline_scaling.csv')} timesteps)",
+                 loc="left", fontsize=11)
+
+    # --- panels 2 and 3: memory, both scopes
+    for ax, (column, scale, ylabel, title, fmt) in zip(
+            axes[1:],
+            [("memory_bound_pct", 1.0, "% of pipeline slots stalled",
+              "Memory bound", "{:.0f}%"),
+             ("llc_miss_count", 1e9, "LLC misses, billions",
+              "Last-level cache misses", "{:.1f}")]):
+        width = 0.26
+        for k, impl_label in enumerate(labels):
+            xs = [g + (k - 1) * (width + 0.02) for g in range(len(scopes))]
+            vals = [series(ph, column, scale)[k] for ph, _ in scopes]
+            # Hatch marks the diluted column, so the two scopes stay
+            # distinguishable without a second hue per implementation.
+            ax.bar(xs, vals, width=width, color=colors[k],
+                   label=impl_label if ax is axes[1] else None,
+                   hatch=["", "///"][0], edgecolor="none")
+            for x, v in zip(xs, vals):
+                ax.text(x, v, " " + fmt.format(v), ha="center", va="bottom",
+                        fontsize=8, color=INK, rotation=90)
+        ax.set_xticks(range(len(scopes)))
+        ax.set_xticklabels([lab for _, lab in scopes], fontsize=9)
+        ax.set_ylabel(ylabel)
+        ax.set_ylim(0, max(max(series(ph, column, scale)) for ph, _ in scopes) * 1.42)
+        ax.set_title(title, loc="left", fontsize=11)
+
+    axes[1].legend(fontsize=8.5, ncol=3, loc="upper center", **LEGEND)
+    plt.tight_layout()
+    plt.show()
+
+    norm = mem[mem["phase"] == "normal"].set_index("implementation")
+    return {
+        "threads": int(threads),
+        "predict_speedup": predict[0] / predict[2],
+        "tbb_speedup": predict[0] / predict[1],
+        "mem_bound_base": float(norm.loc["static_baseline", "memory_bound_pct"]),
+        "mem_bound_final": float(norm.loc["tiled_final", "memory_bound_pct"]),
+        "llc_ratio": float(norm.loc["static_baseline", "llc_miss_count"])
+                     / float(norm.loc["tiled_final", "llc_miss_count"]),
+    }
 
 
 # --------------------------------------------------------------- slide 17 --
@@ -1118,8 +1352,16 @@ def final_scaling() -> dict:
     ax.plot(final["threads"], final["predict_agg_s"], "^-", color=TEAL, label="final (tiled)")
     ax.set_xscale("log", base=2)
     ax.set_yscale("log")
+    # Powers of two would put the last tick at 64 with the 72-thread point
+    # past it; label what was measured, as slides 5 and 8 do.
+    ticks = sorted(set(final["threads"]) | set(baseline["threads"]))
+    ax.set_xticks(ticks)
+    ax.set_xticklabels([str(int(t)) for t in ticks], fontsize=9)
+    ax.minorticks_off()
     ax.set_xlabel("threads")
     ax.set_ylabel("aggregate predict time, s")
+    ax.set_title(f"{sweep_timesteps('final_scaling.csv')} timesteps",
+                 loc="left", fontsize=9, color=INK3)
     ax.legend(**LEGEND)
     plt.tight_layout()
     plt.show()

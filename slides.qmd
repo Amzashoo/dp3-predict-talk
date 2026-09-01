@@ -122,10 +122,26 @@ mix = plotting.component_mix()
 
 ## Dynamic dispatch via Intel Thread Building Blocks (TBB) library
 
+::: {.r-stack}
+::: {.fragment .fade-out fragment-index=1}
 ```{python}
 #| fig-height: 4
-plotting.work_stealing_diagram()
+plotting.work_stealing_diagram(frame=1)
 ```
+:::
+::: {.fragment .fade-in-then-out fragment-index=1}
+```{python}
+#| fig-height: 4
+plotting.work_stealing_diagram(frame=2)
+```
+:::
+::: {.fragment fragment-index=2}
+```{python}
+#| fig-height: 4
+plotting.work_stealing_diagram(frame=3)
+```
+:::
+:::
 
 - Same per-source granularity as the static split, dispatched dynamically through `tbb::parallel_for` instead of a fixed slice per thread
 - Work-stealing scheduler: idle threads pick up remaining sources instead of sitting still
@@ -172,8 +188,9 @@ acc = plotting.patch_accumulator_cost()
 plotting.dispatch_variants_diagram()
 ```
 
-- Structural redundancy: a patch's beam apply fires once per patch
-  **per range**, so the finer the stealing, the more applies
+- Structural redundancy: a patch split across a range boundary is applied
+  once in **each** range — applies ≈ patches + ranges, so the finer the
+  stealing, the more applies
 - Tried several variants:
     - Patch parallelism: too coarse, compute time still heterogeneous
     - Thread-local/patch-local accumulators: high memory consumption and high pressure on memory bandwidth
@@ -211,7 +228,7 @@ plotting.tiling_diagram()
 - Current implementation only works on unpolarized sky models
 - **Hypothesis**: expected to cut cache misses and reduce pressure on DDR
 
-## Impact of the new layout
+## Impact of the new layout {.smaller}
 
 ::: {.columns}
 ::: {.column width="45%"}
@@ -223,10 +240,18 @@ layout = plotting.progression_bars("tiled_layout")
 ::: {.column width="55%"}
 - `{python} f"{plotting.fmt_int_html(layout['before'])}s → {plotting.fmt_int_html(layout['after'])}s"` predict time,
   **`{python} f"{layout['speedup']:.2f}x"`**
-- Beam applications are done on-the-fly in the in the Stokes-I path
-  so the per-patch buffer round-trip disappears
-  `{python} f"{work['static_beam_s']:.0f}"`s of thread time to
+- Beam applications are done on-the-fly in the Stokes-I path, so the
+  per-patch buffer round-trip disappears:
+  `{python} f"{work['static_beam_s']:.0f}"`s of thread time →
   `{python} f"{work['tiled_beam_s']:.1f}"`s
+- Hypothesis confirmed — the tile really does keep a thread's working set
+  in cache:
+
+::: {.center-table}
+```{python}
+plotting.tiled_memory_table()
+```
+:::
 :::
 :::
 
@@ -295,7 +320,24 @@ final = plotting.final_scaling()
 bal = plotting.load_balance_stats()
 ```
 
-- **`{python} f"{final['speedup']:.1f}x"`** faster predict step, upstream → current (`{python} f"{plotting.fmt_int_html(final['upstream'])}s → {plotting.fmt_int_html(final['final_100ts'])}s"`)
+- **`{python} f"{final['speedup']:.1f}x"`** faster predict step, upstream → current (`{python} f"{plotting.fmt_int_html(final['upstream'])}s → {plotting.fmt_int_html(final['final_100ts'])}s"` over the full `{python} f"{plotting.workload('timesteps')}"` timesteps; the sweep above is the 30-timestep one)
+
+## Summary of the gains {.smaller}
+
+```{python}
+#| fig-height: 3.5
+gains = plotting.gains_summary()
+```
+
+- **`{python} f"{gains['predict_speedup']:.1f}x"`** on the predict step at
+  `{python} f"{gains['threads']}"` threads, against
+  `{python} f"{gains['tbb_speedup']:.2f}x"` for work stealing alone
+- On the simulation phase — the code this work changed — memory bound
+  `{python} f"{gains['mem_bound_base']:.0f}%"` →
+  **`{python} f"{gains['mem_bound_final']:.0f}%"`** and
+  **`{python} f"{gains['llc_ratio']:.1f}x"`** fewer LLC misses
+- Over the whole predict step both shrink, because the beam recompute is
+  EveryBeam and untouched: it now dominates what is left
 
 ## Full dataset, end to end {.smaller}
 

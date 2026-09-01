@@ -6,4 +6,4 @@ sky_components,25085
 polarization,"unpolarized (Stokes I only)"
 patches,14365
 timesteps,100
-machine,"2x72 cores, Intel Xeon Platinum 8360Y"
+machine,"72 cores (2x Intel Xeon Platinum 8360Y)"
