@@ -102,15 +102,23 @@ _ = plotting.baseline_scaling_plot()
 ## Per-thread load
 
 ```{python}
-#| fig-height: 4
+#| fig-height: 3.5
 _ = plotting.per_thread_load()
+imb = plotting.baseline_imbalance_split()
+mix = plotting.component_mix()
 ```
 
-- Flat item/thread count
-- Time spent per thread varies
-- Sources are heterogeneous:
-    - point vs. Gaussian components cost different amounts of compute
-    - and an equal-count split doesn't account for it
+- Flat item count: `{python} f"{imb['items_lo']}–{imb['items_hi']}"` sources on
+  every thread, yet thread time spreads
+  **`{python} f"{imb['range_spread']:.1f}x"`**
+- `simulate()` itself only spreads
+  `{python} f"{imb['simulate_spread']:.1f}x"` —
+  `{python} f"{mix['gaussian_pct']:.0f}%"` of components are Gaussian, so an
+  equal-count split gives every thread much the same mix
+- The spread is in the rest: the beam-apply remainder varies
+  **`{python} f"{imb['other_spread']:.1f}x"`** across threads and is
+  `{python} f"{imb['other_share_pct']:.0f}%"` of thread busy time
+- Equal *source* counts are not equal *patch* counts — and the beam fires per patch
 
 ## Dynamic dispatch via Intel Thread Building Blocks (TBB) library
 
@@ -130,7 +138,7 @@ plotting.work_stealing_diagram()
 plotting.tbb_vs_baseline_scaling()
 ```
 
-## Per-thread load, TBB
+## Per-thread load, TBB {.smaller}
 
 ```{python}
 #| fig-height: 3.0
@@ -215,14 +223,14 @@ layout = plotting.progression_bars("tiled_layout")
 ::: {.column width="55%"}
 - `{python} f"{plotting.fmt_int_html(layout['before'])}s → {plotting.fmt_int_html(layout['after'])}s"` predict time,
   **`{python} f"{layout['speedup']:.2f}x"`**
-- Beam applications are done on-the-fly for scalar sources
+- Beam applications are done on-the-fly in the in the Stokes-I path
   so the per-patch buffer round-trip disappears
   `{python} f"{work['static_beam_s']:.0f}"`s of thread time to
   `{python} f"{work['tiled_beam_s']:.1f}"`s
 :::
 :::
 
-## Vectorizing the inner loops
+## Vectorizing the inner loops {.smaller}
 
 ```{python}
 loops = plotting.loop_progression()
@@ -261,7 +269,7 @@ am = plotting.amdahl_split()
 ```
 :::
 ::: {.column width="55%"}
-- Everything on the last four slides acts on the simulation step
+- Everything on the last three slides acts on the simulation step
 - Beam compute is not affected, the only difference comes from doing less of it
 - The beam is now **`{python} f"{am['beam_share_pct']:.0f}%"`** of the predict step
 :::
@@ -275,7 +283,7 @@ final_load = plotting.final_per_thread_load()
 gran = plotting.tile_granularity()
 ```
 
-- Beam application for scalar sources is now contained in `simulate()`, the remainder is for Gaussian sources
+- Beam application is now contained in `simulate()`
 - Residual spread is a granularity floor: going finer leads to worse performance
 
 ## Final results
@@ -289,15 +297,30 @@ bal = plotting.load_balance_stats()
 
 - **`{python} f"{final['speedup']:.1f}x"`** faster predict step, upstream → current (`{python} f"{plotting.fmt_int_html(final['upstream'])}s → {plotting.fmt_int_html(final['final_100ts'])}s"`)
 
+## Full dataset, end to end {.smaller}
+
+```{python}
+#| fig-height: 3.4
+full = plotting.full_dataset_threeway()
+```
+
+- The production pipeline over the whole
+  `{python} f"{full['timesteps']}"`-timestep set, one node, one binary:
+  **`{python} f"{plotting.fmt_int_html(full['base_wall'])}s → {plotting.fmt_int_html(full['new_wall'])}s"`**
+  wall clock, `{python} f"{plotting.fmt_int_html(full['saved_s'])}"`s saved per run
+- Predict step **`{python} f"{full['predict_speedup']:.2f}x"`**, and
+  `{python} f"{full['vs_fast_predict']:.2f}x"` against FastPredict
+
 ## Conclusion / discussion
 
-- Correctness: unit tests + results validated on a test realistic test case
+- Correctness: unit tests + results validated on a realistic test case
 - Good performance gains through a loop reordering
 - Takeaway:
   - a better scheduler alone had a ceiling close to the baseline
   - it balanced the threads much better
   - but paid for it in both compute and memory accesses from redundant per-patch work
   - the real gain came from reordering memory access
-- Perspective: polarized sky models. The tiled path needs Stokes I today;
-  applying the Jones matrix per patch **per channel slab** keeps
-  the tile in L2 and saves memory traffic
+- Perspective:
+    - polarized sky models. The tiled path needs Stokes I today; applying the Jones matrix per patch **per channel slab** keeps the tile in L2 and saves memory traffic
+    - GPU implementation
+    - applying FastPredict improvements (look into trigonometry lookup tables, source type batching, some possible precompute)

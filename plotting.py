@@ -259,6 +259,39 @@ def baseline_scaling_plot() -> dict:
 
 
 # ---------------------------------------------------------------- slide 6 --
+def component_mix() -> dict:
+    """Point vs. Gaussian share of the sky model (scripts/12_component_types.py).
+
+    The share is the point slide 6 needs: at 93% one type, an equal-count
+    split hands every thread much the same mix, so component type cannot be
+    what unbalances them.
+    """
+    counts = pd.read_csv(DATA / "component_types.csv").set_index("type")["count"]
+    total = counts.sum()
+    return {"gaussian": int(counts["gaussian"]), "point": int(counts["point"]),
+            "total": int(total),
+            "gaussian_pct": counts["gaussian"] / total * 100,
+            "point_pct": counts["point"] / total * 100}
+
+
+def baseline_imbalance_split() -> dict:
+    """Where the baseline's per-thread spread actually comes from.
+
+    items is flat and simulate() nearly so; the variance sits in other_s -
+    the beam-apply remainder, which is also ~40% of thread busy time. This is
+    the same cause slides 9-10 then quantify, so slide 6 points at it rather
+    than at source heterogeneity.
+    """
+    hist = pd.read_csv(DATA / "baseline_histogram.csv")
+    simulate, other = hist["simulate_s"].sum(), hist["other_s"].sum()
+    return {"items_lo": int(hist["items"].min()),
+            "items_hi": int(hist["items"].max()),
+            "range_spread": hist["range_s"].max() / hist["range_s"].min(),
+            "simulate_spread": hist["simulate_s"].max() / hist["simulate_s"].min(),
+            "other_spread": hist["other_s"].max() / hist["other_s"].min(),
+            "other_share_pct": other / (simulate + other) * 100}
+
+
 def _per_thread_load(csv_name: str, color: str, pending_hint: str,
                      items_label: str = "sources simulated") -> dict:
     """Items and time per thread for one build, one representative timestep.
@@ -300,9 +333,11 @@ def _per_thread_load(csv_name: str, color: str, pending_hint: str,
     # sit on top of the bars and are unreadable on the dark slide.
     fig.legend(*ax2.get_legend_handles_labels(), fontsize=8.5, **LEGEND,
                ncol=2, loc="lower center", bbox_to_anchor=(0.5, -0.03))
+    # Still returned below (load_balance_table, tile_granularity read it), but
+    # off the title: it is (max-min)/mean, while the slides quote a max/min
+    # ratio, and two different spreads on one panel invite the question.
     spread = (total.max() - total.min()) / mean_t * 100
-    ax2.set_title(f"Time per thread (total spread {spread:.0f}%)",
-                  loc="left", fontsize=11)
+    ax2.set_title("Time per thread", loc="left", fontsize=11)
 
     plt.tight_layout()
     plt.show()
@@ -995,6 +1030,43 @@ def progression_bars(up_to_stage: str) -> dict:
                     "normal_speedup": before / after,
                     "step_speedup": values.iloc[-2] / current})
     return out
+
+
+def full_dataset_threeway() -> dict:
+    """The production run: 900 timesteps, the three predict implementations,
+    one node and one binary. Wall time split into predict and the rest of the
+    pipeline - the rest is untouched by this work and sets the ceiling."""
+    df = pd.read_csv(DATA / "full_dataset_threeway.csv")
+    colors = [BLUE, ORANGE, TEAL]
+
+    fig, ax = plt.subplots(figsize=(6.2, 3.4))
+    x = range(len(df))
+    wall = df["wall_s"]
+    predict = df["predict_s"]
+    ax.bar(x, predict, color=colors, width=0.6)
+    ax.bar(x, wall - predict, bottom=predict, color="#d3d8da", width=0.6)
+
+    ax.set_xticks(list(x))
+    ax.set_xticklabels(df["label"])
+    ax.set_ylabel("wall clock, s")
+    ax.set_ylim(0, wall.max() * 1.18)
+    for i, (w, p_) in enumerate(zip(wall, predict)):
+        ax.text(i, p_ / 2, f"predict\n{fmt_int(p_)}s", ha="center", va="center",
+                color="white", fontsize=9, fontweight="bold")
+        ax.text(i, w + wall.max() * 0.03, f"{fmt_int(w)}s", ha="center", fontsize=10)
+    plt.tight_layout()
+    plt.show()
+
+    base, fast, new_ = (df.iloc[i] for i in range(3))
+    return {"base_wall": base["wall_s"], "new_wall": new_["wall_s"],
+            "base_predict": base["predict_s"], "new_predict": new_["predict_s"],
+            "fast_wall": fast["wall_s"], "fast_predict": fast["predict_s"],
+            "wall_speedup": base["wall_s"] / new_["wall_s"],
+            "predict_speedup": base["predict_s"] / new_["predict_s"],
+            "vs_fast_predict": fast["predict_s"] / new_["predict_s"],
+            "vs_fast_wall": fast["wall_s"] / new_["wall_s"],
+            "saved_s": base["wall_s"] - new_["wall_s"],
+            "timesteps": int(base["timesteps"])}
 
 
 # --------------------------------------------------------------- slide 15 --

@@ -199,15 +199,19 @@ $selection-bg: rgba($red, 0.16);
 }
 .reveal table tr:hover td { background: $stock-2; }
 
-// Opt-in one-line cells; deliberately not the default - slide 3's machine
-// description is a sentence and has to wrap.
 .reveal .nowrap table th,
 .reveal .nowrap table td { white-space: nowrap; }
 
 // matplotlib renders transparent, so a figure inherits the stock. No shadow:
 // drop-shadow on a transparent PNG offsets every glyph and tick separately,
 // which reads as a double-printed axis rather than as a shadow.
-.reveal .cell-output-display img { background: transparent; }
+.reveal .cell-output-display img {
+  background: transparent;
+
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
 
 // Reveal keeps the neighbouring slides in the layout (`display: block`,
 // `opacity: 0`) for cross-fades. This deck runs `transition: none`, so they
@@ -219,13 +223,13 @@ html:not(.print-pdf):not(.reveal-scroll) {
   .reveal .slides > section.future { visibility: hidden; }
 }
 
-.reveal .slide-number {
-  color: $stock;
-  background: $red;
+.reveal div.slide-number {
+  color: $red;
   border-radius: 0;
   padding: 0.12em 0.5em;
   font-weight: 600;
 }
+.reveal div.slide-number a { color: inherit; text-decoration: none; }
 .reveal .progress { color: $red; height: 4px; }
 .reveal .controls { color: $red; }
 
