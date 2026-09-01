@@ -17,8 +17,8 @@ $link-color: $red;
 $link-color-hover: $teal;
 
 $presentation-heading-color: $ink;
-$presentation-heading-font: "Spectral", Georgia, "Times New Roman", serif;
-$presentation-font-family: "Barlow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+$presentation-heading-font: "Raleway", "Helvetica Neue", Helvetica, Arial, sans-serif;
+$presentation-font-family: "Roboto Slab", Georgia, "Times New Roman", serif;
 $presentation-font-size-root: 22px;
 $presentation-line-height: 1.45;
 
@@ -29,7 +29,7 @@ $selection-bg: rgba($red, 0.16);
 
 /*-- scss:rules --*/
 
-@import url('https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Roboto+Slab:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 .reveal {
   font-family: $presentation-font-family;
@@ -181,7 +181,7 @@ $selection-bg: rgba($red, 0.16);
 // so no horizontal bar sits across the top of the table either.
 .reveal table { border-collapse: collapse; margin: 0.6em 0; }
 .reveal table th {
-  font-family: "Barlow", Helvetica, Arial, sans-serif;
+  font-family: $presentation-heading-font;
   color: $ink;
   background: none;
   border: none;

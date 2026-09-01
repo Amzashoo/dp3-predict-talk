@@ -1248,11 +1248,15 @@ def amdahl_split() -> dict:
             "beam_share_pct": fb / (fn + fb) * 100}
 
 
-def gains_summary() -> dict:
+def gains_summary(with_predict: bool = True) -> dict:
     """Three panels: what the work bought, and what it cost memory.
 
     One measure per panel - predict time, stall fraction, miss count are
     three scales and a shared axis would misrepresent two of them.
+
+    `with_predict=False` drops the predict-time panel and keeps the two
+    memory ones, for the slide that shows this beside the Amdahl split -
+    the time story is already told by that chart and by slide 17.
 
     Panels 2 and 3 carry both measurement scopes side by side on purpose.
     The predict-wide column includes the two beam-recompute timesteps, which
@@ -1283,25 +1287,29 @@ def gains_summary() -> dict:
         d = mem[mem["phase"] == phase].set_index("implementation")
         return [d.loc[i, column] / scale for i in order]
 
-    fig, axes = plt.subplots(1, 3, figsize=(11.4, 3.6))
+    fig, axes = plt.subplots(1, 3 if with_predict else 2,
+                             figsize=(11.4 if with_predict else 7.8, 3.6))
+    axes = list(axes)
 
     # --- panel 1: what it bought
-    ax = axes[0]
-    ax.bar(range(3), predict, color=colors, width=0.62)
-    ax.set_xticks(range(3))
-    ax.set_xticklabels(labels)
-    ax.set_ylabel("predict step, s")
-    ax.set_ylim(0, max(predict) * 1.22)
-    for i, v in enumerate(predict):
-        ax.text(i, v + max(predict) * 0.03, f"{fmt_int(v)}s", ha="center",
-                fontsize=9, color=INK)
-    ax.set_title(f"Predict time ({threads} threads, "
-                 f"{sweep_timesteps('baseline_scaling.csv')} timesteps)",
-                 loc="left", fontsize=11)
+    if with_predict:
+        ax = axes[0]
+        ax.bar(range(3), predict, color=colors, width=0.62)
+        ax.set_xticks(range(3))
+        ax.set_xticklabels(labels)
+        ax.set_ylabel("predict step, s")
+        ax.set_ylim(0, max(predict) * 1.22)
+        for i, v in enumerate(predict):
+            ax.text(i, v + max(predict) * 0.03, f"{fmt_int(v)}s", ha="center",
+                    fontsize=9, color=INK)
+        ax.set_title(f"Predict time ({threads} threads, "
+                     f"{sweep_timesteps('baseline_scaling.csv')} timesteps)",
+                     loc="left", fontsize=11)
 
     # --- panels 2 and 3: memory, both scopes
+    mem_axes = axes[1:] if with_predict else axes
     for ax, (column, scale, ylabel, title, fmt) in zip(
-            axes[1:],
+            mem_axes,
             [("memory_bound_pct", 1.0, "% of pipeline slots stalled",
               "Memory bound", "{:.0f}%"),
              ("llc_miss_count", 1e9, "LLC misses, billions",
@@ -1313,7 +1321,7 @@ def gains_summary() -> dict:
             # Hatch marks the diluted column, so the two scopes stay
             # distinguishable without a second hue per implementation.
             ax.bar(xs, vals, width=width, color=colors[k],
-                   label=impl_label if ax is axes[1] else None,
+                   label=impl_label if ax is mem_axes[0] else None,
                    hatch=["", "///"][0], edgecolor="none")
             for x, v in zip(xs, vals):
                 ax.text(x, v, " " + fmt.format(v), ha="center", va="bottom",
@@ -1324,7 +1332,7 @@ def gains_summary() -> dict:
         ax.set_ylim(0, max(max(series(ph, column, scale)) for ph, _ in scopes) * 1.42)
         ax.set_title(title, loc="left", fontsize=11)
 
-    axes[1].legend(fontsize=8.5, ncol=3, loc="upper center", **LEGEND)
+    mem_axes[0].legend(fontsize=8.5, ncol=3, loc="upper center", **LEGEND)
     plt.tight_layout()
     plt.show()
 

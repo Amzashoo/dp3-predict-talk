@@ -191,10 +191,7 @@ plotting.dispatch_variants_diagram()
 - Structural redundancy: a patch split across a range boundary is applied
   once in **each** range — applies ≈ patches + ranges, so the finer the
   stealing, the more applies
-- Tried several variants:
-    - Patch parallelism: too coarse, compute time still heterogeneous
-    - Thread-local/patch-local accumulators: high memory consumption and high pressure on memory bandwidth
-    - Pipeline based approach with task stealing and queues: complex and low performance benefit
+- Four variants tried, verdicts under each panel
 
     ==> General conclusion: tradeoff between parallelism efficiency and memory overhead
 
@@ -284,21 +281,31 @@ plotting.loop_progression_bars()
 :::
 :::
 
-## Overall effect
+## Overall effect {.smaller}
 
 ::: {.columns}
-::: {.column width="45%"}
+::: {.column width="36%"}
 ```{python}
-#| fig-height: 3.4
+#| fig-height: 3.0
 am = plotting.amdahl_split()
 ```
 :::
-::: {.column width="55%"}
-- Everything on the last three slides acts on the simulation step
-- Beam compute is not affected, the only difference comes from doing less of it
-- The beam is now **`{python} f"{am['beam_share_pct']:.0f}%"`** of the predict step
+::: {.column width="64%"}
+```{python}
+#| fig-height: 3.0
+gains = plotting.gains_summary(with_predict=False)
+```
 :::
 :::
+
+- The work was on the simulation step only, which was dominant.
+- Beam compute is now **`{python} f"{am['beam_share_pct']:.0f}%"`** of the predict step.
+- On the simulation phase, memory bound
+  `{python} f"{gains['mem_bound_base']:.0f}%"` →
+  **`{python} f"{gains['mem_bound_final']:.0f}%"`** and
+  **`{python} f"{gains['llc_ratio']:.1f}x"`** fewer LLC misses
+- Over the whole predict step both shrink less: the untouched beam dominates
+  what is left
 
 ## Per-thread load, final version
 
@@ -321,23 +328,6 @@ bal = plotting.load_balance_stats()
 ```
 
 - **`{python} f"{final['speedup']:.1f}x"`** faster predict step, upstream → current (`{python} f"{plotting.fmt_int_html(final['upstream'])}s → {plotting.fmt_int_html(final['final_100ts'])}s"` over the full `{python} f"{plotting.workload('timesteps')}"` timesteps; the sweep above is the 30-timestep one)
-
-## Summary of the gains {.smaller}
-
-```{python}
-#| fig-height: 3.5
-gains = plotting.gains_summary()
-```
-
-- **`{python} f"{gains['predict_speedup']:.1f}x"`** on the predict step at
-  `{python} f"{gains['threads']}"` threads, against
-  `{python} f"{gains['tbb_speedup']:.2f}x"` for work stealing alone
-- On the simulation phase — the code this work changed — memory bound
-  `{python} f"{gains['mem_bound_base']:.0f}%"` →
-  **`{python} f"{gains['mem_bound_final']:.0f}%"`** and
-  **`{python} f"{gains['llc_ratio']:.1f}x"`** fewer LLC misses
-- Over the whole predict step both shrink, because the beam recompute is
-  EveryBeam and untouched: it now dominates what is left
 
 ## Full dataset, end to end {.smaller}
 
