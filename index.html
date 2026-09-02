@@ -1012,7 +1012,7 @@ Hamza Chouh, EPFL
 <li>Self-calibration alternates <strong>predict</strong> (simulate a model sky) and <strong>solve</strong> (fit corrections against it)</li>
 </ul>
 </div><div class="column" style="width:40%;">
-<div id="74f9194c" class="cell" data-fig-height="2" data-execution_count="2">
+<div id="62412ef3" class="cell" data-fig-height="2" data-execution_count="2">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1034,7 +1034,7 @@ Hamza Chouh, EPFL
 <li>Mostly DP3 internal implementation; calls EveryBeam for the beam response</li>
 </ul>
 </div><div class="column" style="width:50%;">
-<div id="dc588445" class="cell" data-execution_count="3">
+<div id="940894a2" class="cell" data-execution_count="3">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="3">
 <p>Test configuration used for benchmarking in this talk</p>
 <table class="caption-top">
@@ -1098,7 +1098,7 @@ Hamza Chouh, EPFL
 <li>Beam computations are duplicated when shared among multiple threads</li>
 </ul>
 </div><div class="column nowrap" style="width:40%;">
-<div id="8f7ae97c" class="cell" data-execution_count="4">
+<div id="707d57d4" class="cell" data-execution_count="4">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="4">
 <table class="caption-top">
 <thead>
@@ -1134,7 +1134,7 @@ Hamza Chouh, EPFL
 <h2>Performance measurements</h2>
 <div class="columns">
 <div class="column" style="width:50%;">
-<div id="a65e995f" class="cell" data-fig-height="3.5" data-execution_count="5">
+<div id="ddd33c2a" class="cell" data-fig-height="3.5" data-execution_count="5">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1144,7 +1144,7 @@ Hamza Chouh, EPFL
 </div>
 </div>
 </div><div class="column" style="width:50%;">
-<div id="fe4451b2" class="cell" data-execution_count="6">
+<div id="7a317c5e" class="cell" data-execution_count="6">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="6">
 <ul>
 <li><strong>32.0%</strong> effective CPU utilization — 23.0 of 72 cores (VTune, spin and overhead discounted)</li>
@@ -1152,7 +1152,7 @@ Hamza Chouh, EPFL
 </ul>
 </div>
 </div>
-<div id="380be153" class="cell" data-fig-height="3.1" data-execution_count="7">
+<div id="655f7810" class="cell" data-fig-height="3.1" data-execution_count="7">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1168,7 +1168,7 @@ Hamza Chouh, EPFL
 </section>
 <section id="per-thread-load" class="slide level2">
 <h2>Per-thread load</h2>
-<div id="c51dfb6e" class="cell" data-fig-height="3.5" data-execution_count="8">
+<div id="35166d09" class="cell" data-fig-height="3.5" data-execution_count="8">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1188,7 +1188,7 @@ Hamza Chouh, EPFL
 <h2>Dynamic dispatch via Intel Thread Building Blocks (TBB) library</h2>
 <div class="r-stack">
 <div class="fragment fade-out" data-fragment-index="1">
-<div id="47d2333c" class="cell" data-fig-height="4" data-execution_count="9">
+<div id="8ffa6dba" class="cell" data-fig-height="4" data-execution_count="9">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1199,7 +1199,7 @@ Hamza Chouh, EPFL
 </div>
 </div>
 <div class="fragment fade-in-then-out" data-fragment-index="1">
-<div id="5ac13dae" class="cell" data-fig-height="4" data-execution_count="10">
+<div id="986df339" class="cell" data-fig-height="4" data-execution_count="10">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1210,7 +1210,7 @@ Hamza Chouh, EPFL
 </div>
 </div>
 <div class="fragment" data-fragment-index="2">
-<div id="1bc08aac" class="cell" data-fig-height="4" data-execution_count="11">
+<div id="e3f0f2b2" class="cell" data-fig-height="4" data-execution_count="11">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1229,7 +1229,7 @@ Hamza Chouh, EPFL
 </section>
 <section id="tbb-attempt-results" class="slide level2">
 <h2>TBB attempt: results</h2>
-<div id="1cf71d74" class="cell" data-fig-height="4" data-execution_count="12">
+<div id="36ebb08e" class="cell" data-fig-height="4" data-execution_count="12">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1238,13 +1238,13 @@ Hamza Chouh, EPFL
 </div>
 </div>
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="12">
-<p><strong>6–24% faster</strong> than the static baseline at every measured thread count — 24% at 24 threads, but 7% at 72. Still far short of what the profiling budget suggested was available.</p>
+<p><strong>6–24% faster</strong> than the static baseline at every measured thread count: 24% at 24 threads, but 7% at 72. Still far short of what the profiling budget suggested was available.</p>
 </div>
 </div>
 </section>
 <section id="per-thread-load-tbb" class="slide level2 smaller">
 <h2>Per-thread load, TBB</h2>
-<div id="4f95686c" class="cell" data-fig-height="3" data-execution_count="13">
+<div id="a4b09e36" class="cell" data-fig-height="3" data-execution_count="13">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1258,11 +1258,11 @@ Hamza Chouh, EPFL
 <ul>
 <li>Work stealing redistributes work ☭: between 249 and 498 items per thread</li>
 <li>Better per-thread time balance</li>
-<li>Only 5% of total time saved: total work grew 22% (456 → 556 thread-seconds)</li>
-<li>Because of too many beam application calls that could be mutualized!</li>
+<li>Only 5% of the makespan saved at 72 threads: total work grew 22% (456 → 556 thread-seconds)</li>
+<li>89 of those 100 extra thread-seconds are beam applies (183 → 272, +49%): the same patch is re-applied in every range that touches it</li>
 </ul>
 </div><div class="column" style="width:46%;">
-<div id="f14def52" class="cell" data-execution_count="14">
+<div id="3cb8da7f" class="cell" data-execution_count="14">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="14">
 <table class="caption-top">
 <thead>
@@ -1297,7 +1297,7 @@ Hamza Chouh, EPFL
 </section>
 <section id="removing-the-redundant-beam-applies" class="slide level2">
 <h2>Removing the redundant beam applies</h2>
-<div id="99bd9a17" class="cell" data-fig-height="2.5" data-execution_count="15">
+<div id="c21f005f" class="cell" data-fig-height="2.5" data-execution_count="15">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1319,7 +1319,7 @@ Hamza Chouh, EPFL
 <ul>
 <li>Next step was to look at memory reads/writes and how to optimize them</li>
 </ul>
-<div id="5d36c2a7" class="cell" data-fig-height="3.5" data-execution_count="16">
+<div id="c72ce03b" class="cell" data-fig-height="3.5" data-execution_count="16">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1329,7 +1329,7 @@ Hamza Chouh, EPFL
 </div>
 </div>
 </div><div class="column" style="width:45%;">
-<div id="4b921de8" class="cell" data-execution_count="17">
+<div id="335a20b3" class="cell" data-execution_count="17">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="17">
 <table class="caption-top">
 <thead>
@@ -1374,7 +1374,7 @@ Hamza Chouh, EPFL
 </section>
 <section id="tile-by-channel-and-source" class="slide level2">
 <h2>Tile by channel and source</h2>
-<div id="994e5f39" class="cell" data-fig-height="4.5" data-execution_count="18">
+<div id="94096d92" class="cell" data-fig-height="4.5" data-execution_count="18">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1393,7 +1393,7 @@ Hamza Chouh, EPFL
 <h2>Impact of the new layout</h2>
 <div class="columns">
 <div class="column" style="width:45%;">
-<div id="96eaa52c" class="cell" data-fig-height="3.5" data-execution_count="19">
+<div id="dc865612" class="cell" data-fig-height="3.5" data-execution_count="19">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1409,7 +1409,7 @@ Hamza Chouh, EPFL
 <li>Hypothesis confirmed — the tile really does keep a thread’s working set in cache:</li>
 </ul>
 <div class="center-table">
-<div id="1c35e46f" class="cell" data-execution_count="20">
+<div id="913af78c" class="cell" data-execution_count="20">
 <div class="cell-output cell-output-display cell-output-markdown" data-execution_count="20">
 <table class="caption-top">
 <thead>
@@ -1457,7 +1457,7 @@ Hamza Chouh, EPFL
 <h2>Vectorizing the inner loops</h2>
 <div class="columns">
 <div class="column" style="width:50%;">
-<div id="f222943d" class="cell" data-fig-height="4.6" data-execution_count="22">
+<div id="16efb50f" class="cell" data-fig-height="4.6" data-execution_count="22">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1467,7 +1467,7 @@ Hamza Chouh, EPFL
 </div>
 </div>
 </div><div class="column" style="width:50%;">
-<div id="91d6f096" class="cell" data-fig-height="2.7" data-execution_count="23">
+<div id="3f8772f1" class="cell" data-fig-height="2.7" data-execution_count="23">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1488,7 +1488,7 @@ Hamza Chouh, EPFL
 <h2>Overall effect</h2>
 <div class="columns">
 <div class="column" style="width:36%;">
-<div id="0239868a" class="cell" data-fig-height="3" data-execution_count="24">
+<div id="9f1c59cc" class="cell" data-fig-height="3" data-execution_count="24">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1498,7 +1498,7 @@ Hamza Chouh, EPFL
 </div>
 </div>
 </div><div class="column" style="width:64%;">
-<div id="9b15280c" class="cell" data-fig-height="3" data-execution_count="25">
+<div id="0b68588c" class="cell" data-fig-height="3" data-execution_count="25">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1517,7 +1517,7 @@ Hamza Chouh, EPFL
 </section>
 <section id="per-thread-load-final-version" class="slide level2">
 <h2>Per-thread load, final version</h2>
-<div id="1d23a227" class="cell" data-fig-height="3" data-execution_count="26">
+<div id="6456b904" class="cell" data-fig-height="3" data-execution_count="26">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
@@ -1533,7 +1533,7 @@ Hamza Chouh, EPFL
 </section>
 <section id="final-results" class="slide level2">
 <h2>Final results</h2>
-<div id="a3833702" class="cell" data-fig-height="4.5" data-execution_count="27">
+<div id="3d07fd7c" class="cell" data-fig-height="4.5" data-execution_count="27">
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure>
@@ -1548,7 +1548,7 @@ Hamza Chouh, EPFL
 </section>
 <section id="full-dataset-end-to-end" class="slide level2 smaller">
 <h2>Full dataset, end to end</h2>
-<div id="ed81e88b" class="cell" data-fig-height="3.4" data-execution_count="28">
+<div id="faaba4a8" class="cell" data-fig-height="3.4" data-execution_count="28">
 <div class="cell-output cell-output-display">
 <div>
 <figure>
